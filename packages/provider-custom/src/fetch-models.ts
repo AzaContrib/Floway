@@ -9,12 +9,14 @@
 //   3. OpenAI/Anthropic superset with optional display_name, created_at,
 //      limits, pricing, kind on the model and a `data` array on the container.
 //
-// OpenAI-compatible gateways publish `context_window` / `max_output_tokens`
-// at the model top level (shape 1) rather than inside a `limits` object, and a
-// flat `pricing` block in dollars per million tokens; both map onto our
-// limits/ModelPricing shapes (see perMillionTokenRates). A model is admitted
-// if it has a string `id`; everything else is best-effort metadata. The
-// container is admitted if `data` is an array.
+// OpenAI-compatible gateways publish model metadata at the model top level
+// (shape 1) rather than in our nested shapes:
+//   • `context_window` / `max_output_tokens`   → `limits` fields
+//   • `pricing: { input, output, ... }`        → per-token ModelPricing
+//     (dollars per million tokens; see perMillionTokenRates)
+//   • `capabilities.vision` / `reasoning`      → `chat` modalities / effort
+// A model is admitted if it has a string `id`; everything else is best-effort
+// metadata. The container is admitted if `data` is an array.
 
 import type { CustomUpstreamConfig } from './config.ts';
 import { customFetchModels } from './fetch.ts';
@@ -137,6 +139,52 @@ const parseKind = (value: unknown): ModelKind | undefined => {
   return undefined;
 };
 
+// OpenAI-compatible top-level chat metadata: `capabilities.vision` turns on
+// image input, and `reasoning.effort_levels` / `reasoning.default_effort_level`
+// (a `[{value, display}]` list with one display string per level) project onto
+// our unified chat `effort` shape. Best-effort: anything malformed contributes
+// nothing rather than dropping the model.
+const parseOpenAICompatReasoningEffort = (reasoning: Record<string, unknown>): UpstreamChatModelConfig['reasoning'] | undefined => {
+  try {
+    if (!Array.isArray(reasoning.effort_levels) || reasoning.effort_levels.length === 0) return undefined;
+    const supported: string[] = [];
+    for (const raw of reasoning.effort_levels) {
+      if (!isRecord(raw) || typeof raw.value !== 'string' || raw.value === '') return undefined;
+      if (!supported.includes(raw.value)) supported.push(raw.value);
+    }
+    if (typeof reasoning.default_effort_level !== 'string' || !supported.includes(reasoning.default_effort_level)) return undefined;
+    return { effort: { supported, default: reasoning.default_effort_level } };
+  } catch {
+    return undefined;
+  }
+};
+
+const parseOpenAICompatChat = (value: Record<string, unknown>): UpstreamChatModelConfig | undefined => {
+  const out: UpstreamChatModelConfig = {};
+  if (isRecord(value.capabilities) && value.capabilities.vision === true) {
+    out.modalities = { input: ['text', 'image'], output: ['text'] };
+  }
+  if (isRecord(value.reasoning)) {
+    const reasoning = parseOpenAICompatReasoningEffort(value.reasoning);
+    if (reasoning !== undefined) out.reasoning = reasoning;
+  }
+  return out.modalities === undefined && out.reasoning === undefined ? undefined : out;
+};
+
+// Explicit Floway-shaped `chat` metadata wins per-field; OpenAI-compat
+// top-level derivation fills whatever the explicit block leaves out.
+const mergeChat = (explicit: UpstreamChatModelConfig | undefined, derived: UpstreamChatModelConfig | undefined): UpstreamChatModelConfig | undefined => {
+  if (explicit === undefined) return derived;
+  if (derived === undefined) return explicit;
+  const out: UpstreamChatModelConfig = {};
+  if (explicit.modalities !== undefined) out.modalities = explicit.modalities;
+  else if (derived.modalities !== undefined) out.modalities = derived.modalities;
+  if (explicit.reasoning !== undefined || derived.reasoning !== undefined) {
+    out.reasoning = { ...derived.reasoning, ...explicit.reasoning };
+  }
+  return out.modalities === undefined && out.reasoning === undefined ? undefined : out;
+};
+
 const parseRawModel = (value: unknown): CustomRawModel | null => {
   if (!isRecord(value)) return null;
   if (typeof value.id !== 'string' || value.id === '') return null;
@@ -166,8 +214,8 @@ const parseRawModel = (value: unknown): CustomRawModel | null => {
   if (kind !== undefined) model.kind = kind;
   // Attempt to parse chat metadata; silently skip on malformed data.
   try {
-    const chat = chatField(value.chat, `${value.id}.chat`);
-    if (chat !== undefined) model.chat = chat;
+    const explicit = chatField(value.chat, `${value.id}.chat`);
+    model.chat = mergeChat(explicit, parseOpenAICompatChat(value));
   } catch { /* skip */ }
   return model;
 };
