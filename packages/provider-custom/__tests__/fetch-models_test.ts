@@ -99,6 +99,92 @@ test('fetchCustomModels reads superset fields (display_name, limits, pricing) fr
   );
 });
 
+test('fetchCustomModels parses the hyper.charm.land OpenAI-compatible shape (top-level limits, flat per-M pricing)', async () => {
+  const { config } = assertCustomUpstreamRecord(upstreamRecord());
+  await withMockedFetch(
+    () => jsonResponse({
+      object: 'list',
+      data: [{
+        id: 'deepseek-v4-flash',
+        object: 'model',
+        created: 1783361967,
+        owned_by: 'hyper',
+        display_name: 'DeepSeek V4 Flash',
+        context_window: 1000000,
+        max_output_tokens: 384000,
+        capabilities: { vision: false },
+        reasoning: { effort_levels: [{ value: 'high', display: 'High' }], default_effort_level: 'high' },
+        pricing: { input: 0.2, output: 0.4, cache_create: 0, cache_hit: 0.04 },
+      }],
+    }),
+    async () => {
+      const result = await fetchCustomModels(config, directFetcher);
+      const model = result.data[0];
+      assertEquals(model.id, 'deepseek-v4-flash');
+      assertEquals(model.display_name, 'DeepSeek V4 Flash');
+      assertEquals(model.created, 1783361967);
+      assertEquals(model.owned_by, 'hyper');
+      assertEquals(model.limits?.max_context_window_tokens, 1000000);
+      assertEquals(model.limits?.max_output_tokens, 384000);
+      assertEquals(model.pricing?.entries[0]?.rates.input_tokens, '0.0000002');
+      assertEquals(model.pricing?.entries[0]?.rates.output_tokens, '0.0000004');
+      assertEquals(model.pricing?.entries[0]?.rates.input_cache_write_tokens, '0');
+      assertEquals(model.pricing?.entries[0]?.rates.input_cache_read_tokens, '0.00000004');
+    },
+  );
+});
+
+test('fetchCustomModels maps a partial flat pricing block to per-token rates', async () => {
+  const { config } = assertCustomUpstreamRecord(upstreamRecord());
+  await withMockedFetch(
+    () => jsonResponse({ object: 'list', data: [{ id: 'm-1', pricing: { input: 1.5, output: 3 } }] }),
+    async () => {
+      const result = await fetchCustomModels(config, directFetcher);
+      assertEquals(result.data[0].pricing?.entries[0]?.rates.input_tokens, '0.0000015');
+      assertEquals(result.data[0].pricing?.entries[0]?.rates.output_tokens, '0.000003');
+    },
+  );
+});
+
+test('fetchCustomModels drops flat pricing blocks with unknown keys or non-numeric rates', async () => {
+  const { config } = assertCustomUpstreamRecord(upstreamRecord());
+  await withMockedFetch(
+    () => jsonResponse({
+      object: 'list', data: [
+        { id: 'unknown-key', pricing: { input: 1, reasoning: 5 } },
+        { id: 'nan-rate', pricing: { input: Number.NaN } },
+        { id: 'string-rate', pricing: { input: '1' } },
+      ],
+    }),
+    async () => {
+      const result = await fetchCustomModels(config, directFetcher);
+      assertEquals(result.data.map(model => model.pricing), [undefined, undefined, undefined]);
+    },
+  );
+});
+
+test('fetchCustomModels merges top-level context limits with a nested limits object', async () => {
+  const { config } = assertCustomUpstreamRecord(upstreamRecord());
+  await withMockedFetch(
+    () => jsonResponse({
+      object: 'list', data: [
+        { id: 'm-1', context_window: 1000000, max_output_tokens: 384000 },
+        { id: 'm-2', context_window: 200000, max_output_tokens: 8192, limits: { max_output_tokens: 4096, max_prompt_tokens: 1000 } },
+      ],
+    }),
+    async () => {
+      const result = await fetchCustomModels(config, directFetcher);
+      const topLevel = result.data[0];
+      assertEquals(topLevel.limits?.max_context_window_tokens, 1000000);
+      assertEquals(topLevel.limits?.max_output_tokens, 384000);
+      const merged = result.data[1];
+      assertEquals(merged.limits?.max_context_window_tokens, 200000);
+      assertEquals(merged.limits?.max_output_tokens, 4096);
+      assertEquals(merged.limits?.max_prompt_tokens, 1000);
+    },
+  );
+});
+
 test('fetchCustomModels keeps a `pricing` block with any subset of billing metrics', async () => {
   const { config } = assertCustomUpstreamRecord(upstreamRecord());
   await withMockedFetch(
