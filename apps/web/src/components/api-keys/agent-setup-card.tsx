@@ -1,4 +1,3 @@
-import { BotRegular, CodeRegular, CodeTextRegular, SparkleRegular } from '@fluentui/react-icons';
 import { useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 
@@ -17,6 +16,10 @@ import { agentSetupCommand, useAgentSetup } from './use-agent-setup';
 import type { ApiKey, ControlPlaneModel } from '../../api/types';
 import claudeIconUrl from '../../assets/claude-color.svg';
 import codexIconUrl from '../../assets/codex.svg';
+import ompIconUrl from '../../assets/omp.svg';
+import opencodeIconUrl from '../../assets/opencode.svg';
+import vscodeIconUrl from '../../assets/vscode.svg';
+import zedIconUrl from '../../assets/zed.svg';
 import { fluentComponents } from '../../fluent';
 import { Trans, useTranslation } from '../../i18n/translation';
 import { filterModelOptions } from '../../lib/model-query';
@@ -84,10 +87,10 @@ export function AgentSetupCard({ clipboard, initialApiKeyId, initialError, initi
         <TabList aria-label={t('dashboard.apiKeys.agentSetup.agent')} onTabSelect={(_, data) => setAgent(data.value as Agent)} selectedValue={agent} vertical>
           <AgentTab icon={<img alt="" className="h-4 w-4" src={claudeIconUrl} />} label={t('dashboard.apiKeys.configuration.claudeCode')} value="claude" />
           <AgentTab icon={<img alt="" className="h-4 w-4" src={codexIconUrl} />} label={t('dashboard.apiKeys.configuration.codex')} value="codex" />
-          <AgentTab icon={<BotRegular />} label={t('dashboard.apiKeys.configuration.omp')} value="omp" />
-          <AgentTab icon={<CodeRegular />} label={t('dashboard.apiKeys.configuration.vscode')} value="vscode" />
-          <AgentTab icon={<CodeTextRegular />} label={t('dashboard.apiKeys.configuration.zed')} value="zed" />
-          <AgentTab icon={<SparkleRegular />} label={t('dashboard.apiKeys.configuration.opencode')} value="opencode" />
+          <AgentTab icon={<img alt="" className="h-4 w-4" src={ompIconUrl} />} label={t('dashboard.apiKeys.configuration.omp')} value="omp" />
+          <AgentTab icon={<img alt="" className="h-4 w-4" src={vscodeIconUrl} />} label={t('dashboard.apiKeys.configuration.vscode')} value="vscode" />
+          <AgentTab icon={<img alt="" className="h-4 w-4" src={zedIconUrl} />} label={t('dashboard.apiKeys.configuration.zed')} value="zed" />
+          <AgentTab icon={<img alt="" className="h-4 w-4" src={opencodeIconUrl} />} label={t('dashboard.apiKeys.configuration.opencode')} value="opencode" />
         </TabList>
       </nav>
 
