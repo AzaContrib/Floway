@@ -21,17 +21,30 @@ function Test-SetupOmpYaml {
   }
 }
 
-# Write the converted oh-my-pi settings transactionally: back up the existing
-# file (if one exists), stage the new content in the same directory, validate
-# it, and rename it into place with owner-only access.
+# Write the converted oh-my-pi settings and the API key transactionally: back
+# up the existing files (if any), stage the new content in the same directory,
+# validate it, and rename it into place with owner-only access. The converter
+# references the key by the FLOWAY_API_KEY env name, which oh-my-pi resolves
+# from its eager .env loading; the key is staged into the same agent directory
+# as models.yml so omp authenticates with the real token instead of the literal
+# env-var name.
+# Ref: https://github.com/can1357/oh-my-pi/blob/main/docs/models.md (apiKey env-name-or-literal semantics)
+# Ref: https://github.com/can1357/oh-my-pi/blob/main/packages/utils/src/env.ts (eager agent-dir .env loading)
 function Write-SetupOmpSettings {
   $configDir = if ($env:OMP_CONFIG_DIR) { $env:OMP_CONFIG_DIR } else { Join-Path $HOME '.omp' }
   $targetDir = Join-Path $configDir 'agent'
   $script:OmpModelsPath = Join-Path $targetDir 'models.yml'
+  $script:OmpEnvPath = Join-Path $targetDir '.env'
   $script:OmpModelsBackup = $null
+  $script:OmpEnvBackup = $null
   $script:OmpModelsExisted = $false
+  $script:OmpEnvExisted = $false
   if (-not (Test-Path -LiteralPath $targetDir)) {
     New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+  }
+
+  if ($SetupApiKey -match "['\\`r`n]") {
+    Stop-Setup 'the oh-my-pi API key contains characters that cannot be stored in the oh-my-pi .env file.'
   }
 
   if (Test-Path -LiteralPath $script:OmpModelsPath) {
@@ -44,6 +57,19 @@ function Write-SetupOmpSettings {
     } catch {
       if (Test-Path -LiteralPath $script:OmpModelsBackup) { Remove-Item -LiteralPath $script:OmpModelsBackup -Force }
       $script:OmpModelsBackup = $null
+      throw
+    }
+  }
+  if (Test-Path -LiteralPath $script:OmpEnvPath) {
+    $script:OmpEnvExisted = $true
+    $stamp = [long]([DateTimeOffset]::UtcNow - [DateTimeOffset]'1970-01-01T00:00:00Z').TotalMilliseconds
+    $script:OmpEnvBackup = "$($script:OmpEnvPath).floway-backup.$stamp.$PID"
+    try {
+      Copy-Item -LiteralPath $script:OmpEnvPath -Destination $script:OmpEnvBackup
+      Protect-SetupFile $script:OmpEnvBackup
+    } catch {
+      if (Test-Path -LiteralPath $script:OmpEnvBackup) { Remove-Item -LiteralPath $script:OmpEnvBackup -Force }
+      $script:OmpEnvBackup = $null
       throw
     }
   }
@@ -73,6 +99,34 @@ function Write-SetupOmpSettings {
   } catch {
     if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Force }
     Restore-SetupManagedFile -Existed $script:OmpModelsExisted -Backup $script:OmpModelsBackup -Path $script:OmpModelsPath -OriginalLabel 'file' -CreatedLabel 'oh-my-pi settings'
+    throw
+  }
+
+  # Stage the key into the agent .env, preserving unrelated lines and replacing
+  # any prior FLOWAY_API_KEY entry.
+  $envStage = "$($script:OmpEnvPath).floway-stage.$PID"
+  try {
+    $envLines = @()
+    if (Test-Path -LiteralPath $script:OmpEnvPath) {
+      $envLines = Get-Content -LiteralPath $script:OmpEnvPath | Where-Object { $_ -notmatch '^(export\s+)?FLOWAY_API_KEY=' }
+    }
+    $envLines += "FLOWAY_API_KEY='$SetupApiKey'"
+    [System.IO.File]::Create($envStage).Dispose()
+    Protect-SetupFile $envStage
+    [System.IO.File]::WriteAllLines($envStage, $envLines, (New-Object System.Text.UTF8Encoding($false)))
+    $check = Get-Content -Raw -LiteralPath $envStage
+    if ($check -notmatch '(?m)^FLOWAY_API_KEY=') { Stop-Setup 'staged oh-my-pi API key failed validation.' }
+    $runningOnWindows = Test-SetupIsWindows
+    if ($script:OmpEnvExisted -and $runningOnWindows) {
+      Protect-SetupFile $script:OmpEnvPath
+      [System.IO.File]::Replace($envStage, $script:OmpEnvPath, [System.Management.Automation.Language.NullString]::Value)
+    } else {
+      Move-Item -LiteralPath $envStage -Destination $script:OmpEnvPath -Force
+    }
+    Remove-SetupOlderBackups -Path $script:OmpEnvPath -Keep $script:OmpEnvBackup
+  } catch {
+    if (Test-Path -LiteralPath $envStage) { Remove-Item -LiteralPath $envStage -Force }
+    Restore-SetupManagedFile -Existed $script:OmpEnvExisted -Backup $script:OmpEnvBackup -Path $script:OmpEnvPath -OriginalLabel 'file' -CreatedLabel 'oh-my-pi API key'
     throw
   }
 }

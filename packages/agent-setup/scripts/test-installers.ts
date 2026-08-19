@@ -368,6 +368,16 @@ const FAKE_MODELS_JSON = JSON.stringify({
       endpoints: {},
       chat: { modalities: { input: ['text'], output: ['text'] } },
     },
+    {
+      id: 'deepseek-v4-flash',
+      object: 'model',
+      type: 'model',
+      display_name: 'DeepSeek V4 Flash',
+      limits: { max_context_window_tokens: 1000000, max_output_tokens: 64000 },
+      kind: 'chat',
+      endpoints: {},
+      chat: { reasoning: { effort: { supported: ['high', 'max'], default: 'high' } } },
+    },
   ],
 }, null, 2);
 
@@ -2630,6 +2640,7 @@ test('codex', 'PowerShell rollback restore failure preserves the Codex provider-
 // --- harness converters (oh-my-pi, VSCode, Zed, opencode) -------------------
 
 const ompModelsPath = (workspace: Workspace): string => join(workspace.home, '.omp', 'agent', 'models.yml');
+const ompEnvPath = (workspace: Workspace): string => join(workspace.home, '.omp', 'agent', '.env');
 const zedSettingsPath = (workspace: Workspace): string => join(workspace.home, '.config', 'zed', 'global_settings.json');
 const opencodeConfigPath = (workspace: Workspace): string => join(workspace.home, '.config', 'opencode', 'opencode.json');
 
@@ -2643,6 +2654,9 @@ test('omp', 'Bash fetches the model list, converts it, and writes models.yml', a
   t.includes(yaml, 'providers:', 'the oh-my-pi settings declare a provider');
   t.includes(yaml, 'gpt-5.6', 'the converted settings include the fetched model');
   t.includes(yaml, 'claude-opus-4-6', 'the converted settings include every chat model');
+  t.includes(yaml, 'apiKey: FLOWAY_API_KEY', 'the converted settings reference the key by env name');
+  const env = readFileSync(ompEnvPath(ws), 'utf8');
+  t.includes(env, `FLOWAY_API_KEY='${SENTINEL_KEY}'`, 'the agent .env carries the real API key so omp authenticates');
   t.excludes(run.combined, SENTINEL_KEY, 'the API key never reaches output');
 });
 
@@ -2656,6 +2670,19 @@ test('omp', 'Bash backs up and replaces an existing models.yml', async t => {
   t.includes(readFileSync(ompModelsPath(ws), 'utf8'), 'providers:', 'the existing file is replaced');
   const backups = readdirSync(join(ws.home, '.omp', 'agent')).filter(name => name.startsWith('models.yml.floway-backup.'));
   t.equal(backups.length, 1, 'the previous file is backed up');
+});
+
+test('omp', 'Bash preserves unrelated .env lines and replaces a prior FLOWAY_API_KEY', async t => {
+  if (!hostPython) skip('no python3 interpreter on this host');
+  const ws = makeWorkspace();
+  mkdirSync(join(ws.home, '.omp', 'agent'), { recursive: true });
+  writeFileSync(ompEnvPath(ws), 'OTHER=keep\nFLOWAY_API_KEY=old\n');
+  const run = await runShellInstaller({ workspace: ws, baseUrl: modelServer.url, configuration: harnessConfig('omp') });
+  t.equal(run.code, 0, `should succeed:\n${run.combined}`);
+  const env = readFileSync(ompEnvPath(ws), 'utf8');
+  t.includes(env, 'OTHER=keep', 'unrelated .env lines survive');
+  t.includes(env, `FLOWAY_API_KEY='${SENTINEL_KEY}'`, 'the prior key is replaced with the real one');
+  t.equal(env.match(/FLOWAY_API_KEY=/g)?.length, 1, 'exactly one FLOWAY_API_KEY line remains');
 });
 
 test('omp', 'Bash fails cleanly when python3 is missing', async t => {
@@ -2704,6 +2731,22 @@ test('opencode', 'Bash merges the converted provider into opencode.json', async 
   const provider = (config.provider as Record<string, Record<string, unknown>>).Floway;
   t.ok((provider.options as Record<string, string>).baseURL === `${modelServer.url}/v1`, 'the provider points at this gateway');
   t.ok(Boolean(provider.models), 'the provider carries the model map');
+  const models = provider.models as Record<string, Record<string, unknown>>;
+  const gpt = models['gpt-5.6'];
+  t.ok(gpt?.reasoning === true, 'the reasoning model advertises reasoning');
+  t.ok(Boolean(gpt?.variants), 'the reasoning model carries reasoning-level variants');
+  const variants = (gpt?.variants ?? {}) as Record<string, Record<string, unknown>>;
+  t.equal(variants.low?.reasoningEffort, 'low', 'the low variant maps to reasoningEffort');
+  t.equal(variants.high?.reasoningEffort, 'high', 'the high variant maps to reasoningEffort');
+  t.equal(Object.keys(variants).length, 4, 'every supported effort level becomes a variant plus the disabled max');
+  t.ok(variants.max?.disabled === true, 'the unsupported max heuristic is disabled');
+  const claude = models['claude-opus-4-6'];
+  t.ok(claude?.variants === undefined, 'a model without effort metadata gets no variants');
+  const deepseek = models['deepseek-v4-flash'];
+  const dsVariants = (deepseek?.variants ?? {}) as Record<string, Record<string, unknown>>;
+  t.ok(Boolean(dsVariants.high && dsVariants.max), 'the partial-set model keeps its real levels');
+  t.ok(dsVariants.low?.disabled === true, 'unsupported heuristic levels are disabled');
+  t.ok(dsVariants.medium?.disabled === true, 'unsupported heuristic levels are disabled');
 });
 
 test('vscode', 'Bash prints the converted JSON instead of writing a file', async t => {

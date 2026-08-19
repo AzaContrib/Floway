@@ -37,6 +37,20 @@ def model_config(model):
         config["limit"]["input"] = limits["max_prompt_tokens"]
     if chat.get("reasoning"):
         config["reasoning"] = True
+        effort = chat["reasoning"].get("effort")
+        if effort and effort.get("supported"):
+            # opencode exposes reasoning effort levels as model variants, each
+            # mapping the level name to the wire `reasoningEffort` it sends.
+            # Ref: https://github.com/anomalyco/opencode/blob/dev/packages/opencode/src/provider/transform.ts
+            config["variants"] = {
+                level: {"reasoningEffort": level} for level in effort["supported"]
+            }
+            # opencode also derives default low/medium/high (and max for
+            # deepseek-v4) variants heuristically; disable the ones this model
+            # does not actually support so the picker only offers real levels.
+            for level in ("low", "medium", "high", "max"):
+                if level not in effort["supported"]:
+                    config["variants"].setdefault(level, {})["disabled"] = True
     if "image" in chat.get("modalities", {}).get("input", []):
         config["attachment"] = True
     modalities = chat.get("modalities")
