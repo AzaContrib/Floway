@@ -37,6 +37,9 @@ function Write-SetupOpencodeSettings {
   $converted = Invoke-SetupHarnessConverter -Name 'opencode' -Converter $converter -Models $models
   $convertedDoc = $converted | ConvertFrom-Json
   if ($null -eq $convertedDoc.provider) { Stop-Setup 'the opencode converter produced no provider settings.' }
+  # The converter cannot know the API key, so inject the real one into the
+  # provider options. opencode sends a literal options.apiKey as the bearer.
+  Set-SetupProp $convertedDoc.provider.Floway.options 'apiKey' $SetupApiKey
 
   if ($document.PSObject.Properties.Name -notcontains 'provider') {
     $document | Add-Member -NotePropertyName provider -NotePropertyValue ([PSCustomObject]@{})

@@ -23,7 +23,10 @@ DEFAULT_UPSTREAM_NAME = "Floway"
 DEFAULT_API_URL = "http://localhost:18088/v1"
 DEFAULT_CONTEXT_WINDOW = 262144
 DEFAULT_MAX_OUTPUT = 65536
-SECRET_ID_PLACEHOLDER = "${input:chat.lm.secret.REPLACE_WITH_YOUR_SECRET_ID}"
+# Sent as a literal placeholder; the installer replaces it with the real API
+# key before writing chatLanguageModels.json. VSCode accepts a literal apiKey
+# and sends it as the bearer token.
+SECRET_ID_PLACEHOLDER = "${input:chat.lm.secret.REPLACE_WITH_FLOWAY_API_KEY}"
 
 
 def model_config(model, api_url):

@@ -2709,6 +2709,7 @@ test('zed', 'Bash merges the converted settings into global_settings.json', asyn
   const ws = makeWorkspace();
   const run = await runShellInstaller({ workspace: ws, baseUrl: modelServer.url, configuration: harnessConfig('zed') });
   t.equal(run.code, 0, `should succeed:\n${run.combined}`);
+  t.includes(run.stdout, 'LLM Providers', 'the installer tells the user to add the API key in Zed');
   const settings = JSON.parse(readFileSync(zedSettingsPath(ws), 'utf8')) as Record<string, unknown>;
   const floway = (settings.language_models as Record<string, Record<string, Record<string, unknown>>>).openai_compatible.Floway;
   t.ok(floway.api_url === `${modelServer.url}/v1`, 'the merged provider points at this gateway');
@@ -2735,6 +2736,7 @@ test('opencode', 'Bash merges the converted provider into opencode.json', async 
   const config = JSON.parse(readFileSync(opencodeConfigPath(ws), 'utf8')) as Record<string, unknown>;
   const provider = (config.provider as Record<string, Record<string, unknown>>).Floway;
   t.ok((provider.options as Record<string, string>).baseURL === `${modelServer.url}/v1`, 'the provider points at this gateway');
+  t.equal((provider.options as Record<string, string>).apiKey, SENTINEL_KEY, 'the real API key is embedded in the provider options');
   t.ok(Boolean(provider.models), 'the provider carries the model map');
   const models = provider.models as Record<string, Record<string, unknown>>;
   const gpt = models['gpt-5.6'];
@@ -2765,6 +2767,8 @@ test('vscode', 'Bash writes the converted groups into chatLanguageModels.json', 
   t.ok(floway !== undefined, 'the settings carry the Floway provider group');
   t.equal(floway?.vendor, 'customendpoint', 'the provider uses the customendpoint vendor');
   t.ok(Array.isArray(floway?.models), 'the provider carries the model list');
+  t.equal(floway?.apiKey, SENTINEL_KEY, 'the real API key is embedded in the Floway group');
+  t.ok(groups.every(group => !Array.isArray(group)), 'the top-level JSON is a flat array of groups');
   t.excludes(run.combined, SENTINEL_KEY, 'the API key never reaches output');
 });
 
@@ -2779,6 +2783,9 @@ test('vscode', 'Bash preserves unrelated provider groups when merging', async t 
   t.equal(groups.length, 2, 'the unrelated group survives alongside Floway');
   t.ok(groups.some(group => group.name === 'Other'), 'the unrelated group is preserved');
   t.equal(groups.filter(group => group.name === 'Floway').length, 1, 'exactly one Floway group remains');
+  const floway = groups.find(group => group.name === 'Floway');
+  t.equal(floway?.apiKey, SENTINEL_KEY, 'the real API key is embedded after merging');
+  t.ok(groups.every(group => !Array.isArray(group)), 'the merged top-level JSON is a flat array');
 });
 
 test('omp', 'PowerShell installer bodies for every harness agent parse without syntax errors', async t => {
@@ -2813,6 +2820,23 @@ test('zed', 'PowerShell merges the converted settings into global_settings.json'
   t.ok(Array.isArray(floway.available_models), 'the merged settings carry the model list');
 });
 
+test('zed', 'PowerShell writes Windows settings to the RoamingAppData Zed directory', async t => {
+  if (!hostPwsh) skip('no PowerShell interpreter on this host');
+  if (!hostPython) skip('no python3 interpreter on this host');
+  const ws = makeWorkspace();
+  const appData = join(ws.home, 'AppData', 'Roaming');
+  const run = await runPowerShellInstaller({
+    workspace: ws, baseUrl: modelServer.url, configuration: harnessConfig('zed'),
+    extraEnv: { APPDATA: appData, AGENT_SETUP_TEST_FORCE_WINDOWS: '1' },
+  });
+  t.equal(run.code, 0, `should succeed:\n${run.combined}`);
+  const settingsPath = join(appData, 'Zed', 'global_settings.json');
+  t.ok(existsSync(settingsPath), 'the Windows config dir is %APPDATA%\\Zed');
+  const settings = JSON.parse(readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
+  const floway = (settings.language_models as Record<string, Record<string, Record<string, unknown>>>).openai_compatible.Floway;
+  t.ok(floway.api_url === `${modelServer.url}/v1`, 'the merged provider points at this gateway');
+});
+
 test('vscode', 'PowerShell writes the converted groups into chatLanguageModels.json', async t => {
   if (!hostPwsh) skip('no PowerShell interpreter on this host');
   if (!hostPython) skip('no python3 interpreter on this host');
@@ -2828,6 +2852,27 @@ test('vscode', 'PowerShell writes the converted groups into chatLanguageModels.j
   t.ok(floway !== undefined, 'the settings carry the Floway provider group');
   t.equal(floway?.vendor, 'customendpoint', 'the provider uses the customendpoint vendor');
   t.ok(Array.isArray(floway?.models), 'the provider carries the model list');
+  t.equal(floway?.apiKey, SENTINEL_KEY, 'the real API key is embedded in the Floway group');
+  t.ok(groups.every(group => !Array.isArray(group)), 'the top-level JSON is a flat array of groups');
+});
+
+test('vscode', 'PowerShell writes Windows settings to the RoamingAppData Code profile', async t => {
+  if (!hostPwsh) skip('no PowerShell interpreter on this host');
+  if (!hostPython) skip('no python3 interpreter on this host');
+  const ws = makeWorkspace();
+  const appData = join(ws.home, 'AppData', 'Roaming');
+  const run = await runPowerShellInstaller({
+    workspace: ws, baseUrl: modelServer.url, configuration: harnessConfig('vscode'),
+    extraEnv: { APPDATA: appData, AGENT_SETUP_TEST_FORCE_WINDOWS: '1' },
+  });
+  t.equal(run.code, 0, `should succeed:\n${run.combined}`);
+  const settingsPath = join(appData, 'Code', 'User', 'chatLanguageModels.json');
+  t.ok(existsSync(settingsPath), 'the Windows profile dir is %APPDATA%\\Code\\User');
+  const groups = JSON.parse(readFileSync(settingsPath, 'utf8')) as Array<Record<string, unknown>>;
+  const floway = groups.find(group => group.name === 'Floway');
+  t.ok(floway !== undefined, 'the settings carry the Floway provider group');
+  t.equal(floway?.apiKey, SENTINEL_KEY, 'the real API key is embedded on Windows too');
+  t.ok(groups.every(group => !Array.isArray(group)), 'the top-level JSON is a flat array on Windows too');
 });
 
 test('opencode', 'PowerShell merges the converted provider into opencode.json', async t => {
@@ -2839,6 +2884,7 @@ test('opencode', 'PowerShell merges the converted provider into opencode.json', 
   const config = JSON.parse(readFileSync(opencodeConfigPath(ws), 'utf8')) as Record<string, unknown>;
   const provider = (config.provider as Record<string, Record<string, unknown>>).Floway;
   t.ok((provider.options as Record<string, string>).baseURL === `${modelServer.url}/v1`, 'the provider points at this gateway');
+  t.equal((provider.options as Record<string, string>).apiKey, SENTINEL_KEY, 'the real API key is embedded in the provider options');
   t.ok(Boolean(provider.models), 'the provider carries the model map');
 });
 

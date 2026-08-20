@@ -100,6 +100,7 @@ configure_agent() {
     return 1
   fi
   out_info "Written to \`$ZED_SETTINGS_PATH\`."
+  out_info 'Add your Floway API key in Zed: Settings → AI → General → LLM Providers.'
   out_agent_notice 'Completed Agent Setup' 'Zed'
 }
 

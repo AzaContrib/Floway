@@ -4,8 +4,20 @@
 # converter emits `{language_models: {openai_compatible: {Floway: {...}}}}`;
 # that subtree is merged into the existing document so unrelated settings
 # survive, then the whole document is written back transactionally.
+# Zed resolves its config dir per platform: `%APPDATA%\Zed` on Windows,
+# `~/.config/zed` on macOS, and `$XDG_CONFIG_HOME/zed` (or `~/.config/zed`) on
+# Linux.
+# Ref: https://github.com/zed-industries/zed/blob/main/crates/paths/src/paths.rs
 function Write-SetupZedSettings {
-  $configDir = if ($env:ZED_CONFIG_DIR) { $env:ZED_CONFIG_DIR } else { Join-Path $HOME '.config\zed' }
+  switch (Get-SetupPlatform) {
+    'windows' {
+    $appData = if ($env:APPDATA) { $env:APPDATA } else { Join-Path $env:USERPROFILE 'AppData\Roaming' }
+    $configDir = if ($env:ZED_CONFIG_DIR) { $env:ZED_CONFIG_DIR } else { Join-Path $appData 'Zed' }
+    }
+    default {
+    $configDir = if ($env:ZED_CONFIG_DIR) { $env:ZED_CONFIG_DIR } else { Join-Path $HOME '.config\zed' }
+    }
+  }
   $script:ZedSettingsPath = Join-Path $configDir 'global_settings.json'
   $script:ZedSettingsBackup = $null
   $script:ZedSettingsExisted = $false
@@ -77,6 +89,7 @@ function Set-SetupAgent {
   try {
     Write-SetupZedSettings
     Write-SetupInfo ('Written to `' + $script:ZedSettingsPath + '`.')
+    Write-SetupInfo 'Add your Floway API key in Zed: Settings → AI → General → LLM Providers.'
     Write-SetupAgentNotice 'Completed Agent Setup' 'Zed'
   } finally {
     Remove-SetupHarnessTmpDir

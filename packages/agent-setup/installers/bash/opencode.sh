@@ -38,6 +38,20 @@ opencode_write_settings() {
     return 1
   fi
 
+  # The converter cannot know the API key, so inject the real one into the
+  # provider options. opencode sends a literal options.apiKey as the bearer.
+  _ow_keyed="$SETUP_TMPDIR/opencode-keyed.json"
+  if ! SETUP_API_KEY="$SETUP_API_KEY" "$JQ" '
+      .provider.Floway.options.apiKey = env.SETUP_API_KEY
+    ' "$_ow_converted" > "$_ow_keyed"; then
+    out_error 'could not inject the API key into the opencode settings.'
+    rm -f "$_ow_converted" "$_ow_keyed"
+    opencode_rollback_settings
+    return 1
+  fi
+  rm -f "$_ow_converted"
+  _ow_converted="$_ow_keyed"
+
   _ow_stage="$OPENCODE_CONFIG_PATH.floway-stage.$$"
   # Deep-merge the converted provider subtree into the existing document (or a
   # fresh object when none exists), then validate the staged result.

@@ -4,7 +4,11 @@
 # in its user data profile directory, so the installer writes the converted
 # groups there (merging the Floway group into any existing groups) instead of
 # asking the user to paste them by hand.
+# The default profile directory is `%APPDATA%\Code\User` on Windows,
+# `~/Library/Application Support/Code/User` on macOS, and
+# `~/.config/Code/User` on Linux.
 # Ref: https://code.visualstudio.com/docs/agent-customization/language-models
+# Ref: https://github.com/microsoft/vscode/blob/main/src/vs/platform/environment/node/userDataPath.ts
 function Write-SetupVscodeSettings {
   $converter = Get-SetupHarnessConverter -Name 'vscode'
   $models = Get-SetupHarnessModels
@@ -13,13 +17,17 @@ function Write-SetupVscodeSettings {
     Stop-Setup 'the VSCode converter produced no model settings.'
   }
 
-  if (Test-SetupIsWindows) {
-    $appData = if ($env:APPDATA) { $env:APPDATA } else { Join-Path $env:USERPROFILE 'AppData\Roaming' }
-    $configDir = if ($env:VSCODE_CONFIG_DIR) { $env:VSCODE_CONFIG_DIR } else { Join-Path $appData 'Code\User' }
-  } elseif ($IsMacOS) {
-    $configDir = if ($env:VSCODE_CONFIG_DIR) { $env:VSCODE_CONFIG_DIR } else { Join-Path $HOME 'Library\Application Support\Code\User' }
-  } else {
-    $configDir = if ($env:VSCODE_CONFIG_DIR) { $env:VSCODE_CONFIG_DIR } else { Join-Path $HOME '.config\Code\User' }
+  switch (Get-SetupPlatform) {
+    'windows' {
+      $appData = if ($env:APPDATA) { $env:APPDATA } else { Join-Path $env:USERPROFILE 'AppData\Roaming' }
+      $configDir = if ($env:VSCODE_CONFIG_DIR) { $env:VSCODE_CONFIG_DIR } else { Join-Path $appData 'Code\User' }
+    }
+    'macos' {
+      $configDir = if ($env:VSCODE_CONFIG_DIR) { $env:VSCODE_CONFIG_DIR } else { Join-Path $HOME 'Library\Application Support\Code\User' }
+    }
+    default {
+      $configDir = if ($env:VSCODE_CONFIG_DIR) { $env:VSCODE_CONFIG_DIR } else { Join-Path $HOME '.config\Code\User' }
+    }
   }
   $script:VscodeSettingsPath = Join-Path $configDir 'chatLanguageModels.json'
   $script:VscodeSettingsBackup = $null
@@ -42,15 +50,25 @@ function Write-SetupVscodeSettings {
     }
   }
 
-  # Windows PowerShell 5.1 unwraps a single-element JSON array, so force array
-  # semantics before merging.
-  $convertedDoc = @($converted | ConvertFrom-Json)
-  if ($convertedDoc.Count -eq 0) { Stop-Setup 'the VSCode converter produced no model settings.' }
+  # Windows PowerShell 5.1 unwraps a single-element JSON array into an object,
+  # so re-wrap only when the parse did not already produce an array. Without
+  # this guard, `@(...)` around a genuine object[] adds a second nesting level
+  # and corrupts the top-level array.
+  $convertedDoc = $converted | ConvertFrom-Json
+  if ($null -eq $convertedDoc) { Stop-Setup 'the VSCode converter produced no model settings.' }
+  if ($convertedDoc -isnot [System.Array]) { $convertedDoc = @($convertedDoc) }
+  # The converter cannot know the API key, so inject the real one into the
+  # Floway group. VSCode sends a literal apiKey as the bearer.
+  foreach ($group in $convertedDoc) {
+    if ($group.name -eq 'Floway') { $group.apiKey = $SetupApiKey }
+  }
 
   $stage = "$($script:VscodeSettingsPath).floway-stage.$PID"
   try {
     if ($script:VscodeSettingsExisted) {
-      $existing = @(Get-Content -Raw -LiteralPath $script:VscodeSettingsPath | ConvertFrom-Json)
+      $existing = Get-Content -Raw -LiteralPath $script:VscodeSettingsPath | ConvertFrom-Json
+      if ($null -eq $existing) { $existing = @() }
+      if ($existing -isnot [System.Array]) { $existing = @($existing) }
       $kept = @($existing | Where-Object { $_.name -ne 'Floway' })
       $merged = @($kept + $convertedDoc)
     } else {

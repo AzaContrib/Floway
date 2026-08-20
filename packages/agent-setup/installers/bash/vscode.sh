@@ -18,6 +18,19 @@ vscode_write_settings() {
     return 1
   fi
 
+  # The converter cannot know the API key, so inject the real one into the
+  # Floway group before merging. VSCode sends a literal apiKey as the bearer.
+  _vs_keyed="$SETUP_TMPDIR/vscode-keyed.json"
+  if ! SETUP_API_KEY="$SETUP_API_KEY" "$JQ" '
+      map(if .name == "Floway" then .apiKey = env.SETUP_API_KEY else . end)
+    ' "$_vs_converted" > "$_vs_keyed"; then
+    out_error 'could not inject the API key into the VSCode settings.'
+    rm -f "$_vs_converted" "$_vs_keyed"
+    return 1
+  fi
+  rm -f "$_vs_converted"
+  _vs_converted="$_vs_keyed"
+
   case "$(uname -s)" in
     Darwin) _vs_dir="${VSCODE_CONFIG_DIR:-$HOME/Library/Application Support/Code/User}" ;;
     Linux) _vs_dir="${VSCODE_CONFIG_DIR:-$HOME/.config/Code/User}" ;;
