@@ -41,7 +41,7 @@ function Write-SetupOpencodeSettings {
   if ($document.PSObject.Properties.Name -notcontains 'provider') {
     $document | Add-Member -NotePropertyName provider -NotePropertyValue ([PSCustomObject]@{})
   }
-  $document.provider.Floway = $convertedDoc.provider.Floway
+  Set-SetupProp $document.provider 'Floway' $convertedDoc.provider.Floway
 
   $stage = "$($script:OpencodeConfigPath).floway-stage.$PID"
   try {

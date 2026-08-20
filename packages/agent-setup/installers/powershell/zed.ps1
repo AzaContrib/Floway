@@ -46,7 +46,7 @@ function Write-SetupZedSettings {
   if ($document.language_models.PSObject.Properties.Name -notcontains 'openai_compatible') {
     $document.language_models | Add-Member -NotePropertyName openai_compatible -NotePropertyValue ([PSCustomObject]@{})
   }
-  $document.language_models.openai_compatible.Floway = $convertedDoc.language_models.openai_compatible.Floway
+  Set-SetupProp $document.language_models.openai_compatible 'Floway' $convertedDoc.language_models.openai_compatible.Floway
 
   $stage = "$($script:ZedSettingsPath).floway-stage.$PID"
   try {

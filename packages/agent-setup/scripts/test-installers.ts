@@ -655,6 +655,9 @@ interface RunOptions {
   forceColor?: boolean;
   noColor?: boolean;
   failRestore?: boolean;
+  // Extra environment variables for the installer process (e.g. a config-dir
+  // override for a harness agent).
+  extraEnv?: Record<string, string>;
 }
 
 const targetAgent = (configuration: InstallerTestConfiguration, agent?: ScriptAgent): ScriptAgent =>
@@ -902,6 +905,7 @@ const runPowerShellInstaller = (options: RunOptions): Promise<RunResult> => {
   if (options.forceColor) env.AGENT_SETUP_TEST_FORCE_COLOR = '1';
   if (options.noColor) env.NO_COLOR = '1';
   if (options.failRestore) env.AGENT_SETUP_TEST_FAIL_RESTORE = '1';
+  if (options.extraEnv) Object.assign(env, options.extraEnv);
 
   return new Promise<RunResult>(resolve => {
     const child = spawn(hostPwsh!, ['-NoProfile', '-File', invocationPath], { env });
@@ -2643,6 +2647,7 @@ const ompModelsPath = (workspace: Workspace): string => join(workspace.home, '.o
 const ompEnvPath = (workspace: Workspace): string => join(workspace.home, '.omp', 'agent', '.env');
 const zedSettingsPath = (workspace: Workspace): string => join(workspace.home, '.config', 'zed', 'global_settings.json');
 const opencodeConfigPath = (workspace: Workspace): string => join(workspace.home, '.config', 'opencode', 'opencode.json');
+const vscodeSettingsPath = (workspace: Workspace): string => join(workspace.home, '.config', 'Code', 'User', 'chatLanguageModels.json');
 
 test('omp', 'Bash fetches the model list, converts it, and writes models.yml', async t => {
   if (!hostPython) skip('no python3 interpreter on this host');
@@ -2749,15 +2754,31 @@ test('opencode', 'Bash merges the converted provider into opencode.json', async 
   t.ok(dsVariants.medium?.disabled === true, 'unsupported heuristic levels are disabled');
 });
 
-test('vscode', 'Bash prints the converted JSON instead of writing a file', async t => {
+test('vscode', 'Bash writes the converted groups into chatLanguageModels.json', async t => {
   if (!hostPython) skip('no python3 interpreter on this host');
   const ws = makeWorkspace();
   const run = await runShellInstaller({ workspace: ws, baseUrl: modelServer.url, configuration: harnessConfig('vscode') });
   t.equal(run.code, 0, `should succeed:\n${run.combined}`);
-  t.includes(run.stdout, '"models"', 'the printed JSON carries the model list');
-  t.includes(run.stdout, 'Chat: Open Language Models', 'the installer prints the paste instructions');
-  t.includes(run.stdout, 'gpt-5.6', 'the printed JSON includes the fetched model');
+  t.includes(run.stdout, 'Written to', 'the installer reports the written path');
+  const groups = JSON.parse(readFileSync(vscodeSettingsPath(ws), 'utf8')) as Array<Record<string, unknown>>;
+  const floway = groups.find(group => group.name === 'Floway');
+  t.ok(floway !== undefined, 'the settings carry the Floway provider group');
+  t.equal(floway?.vendor, 'customendpoint', 'the provider uses the customendpoint vendor');
+  t.ok(Array.isArray(floway?.models), 'the provider carries the model list');
   t.excludes(run.combined, SENTINEL_KEY, 'the API key never reaches output');
+});
+
+test('vscode', 'Bash preserves unrelated provider groups when merging', async t => {
+  if (!hostPython) skip('no python3 interpreter on this host');
+  const ws = makeWorkspace();
+  mkdirSync(join(ws.home, '.config', 'Code', 'User'), { recursive: true });
+  writeFileSync(vscodeSettingsPath(ws), '[{"name":"Other","vendor":"customendpoint","models":[{"id":"other"}]}]');
+  const run = await runShellInstaller({ workspace: ws, baseUrl: modelServer.url, configuration: harnessConfig('vscode') });
+  t.equal(run.code, 0, `should succeed:\n${run.combined}`);
+  const groups = JSON.parse(readFileSync(vscodeSettingsPath(ws), 'utf8')) as Array<Record<string, unknown>>;
+  t.equal(groups.length, 2, 'the unrelated group survives alongside Floway');
+  t.ok(groups.some(group => group.name === 'Other'), 'the unrelated group is preserved');
+  t.equal(groups.filter(group => group.name === 'Floway').length, 1, 'exactly one Floway group remains');
 });
 
 test('omp', 'PowerShell installer bodies for every harness agent parse without syntax errors', async t => {
@@ -2778,6 +2799,47 @@ test('omp', 'PowerShell installer bodies for every harness agent parse without s
     const result = spawnSync(hostPwsh, ['-NoProfile', '-Command', check], { encoding: 'utf8' });
     t.equal(result.status, 0, `${agent} PowerShell parse errors:\n${result.stdout}${result.stderr}`);
   }
+});
+
+test('zed', 'PowerShell merges the converted settings into global_settings.json', async t => {
+  if (!hostPwsh) skip('no PowerShell interpreter on this host');
+  if (!hostPython) skip('no python3 interpreter on this host');
+  const ws = makeWorkspace();
+  const run = await runPowerShellInstaller({ workspace: ws, baseUrl: modelServer.url, configuration: harnessConfig('zed') });
+  t.equal(run.code, 0, `should succeed:\n${run.combined}`);
+  const settings = JSON.parse(readFileSync(zedSettingsPath(ws), 'utf8')) as Record<string, unknown>;
+  const floway = (settings.language_models as Record<string, Record<string, Record<string, unknown>>>).openai_compatible.Floway;
+  t.ok(floway.api_url === `${modelServer.url}/v1`, 'the merged provider points at this gateway');
+  t.ok(Array.isArray(floway.available_models), 'the merged settings carry the model list');
+});
+
+test('vscode', 'PowerShell writes the converted groups into chatLanguageModels.json', async t => {
+  if (!hostPwsh) skip('no PowerShell interpreter on this host');
+  if (!hostPython) skip('no python3 interpreter on this host');
+  const ws = makeWorkspace();
+  const vscodeDir = join(ws.home, '.config', 'Code', 'User');
+  const run = await runPowerShellInstaller({
+    workspace: ws, baseUrl: modelServer.url, configuration: harnessConfig('vscode'),
+    extraEnv: { VSCODE_CONFIG_DIR: vscodeDir },
+  });
+  t.equal(run.code, 0, `should succeed:\n${run.combined}`);
+  const groups = JSON.parse(readFileSync(join(vscodeDir, 'chatLanguageModels.json'), 'utf8')) as Array<Record<string, unknown>>;
+  const floway = groups.find(group => group.name === 'Floway');
+  t.ok(floway !== undefined, 'the settings carry the Floway provider group');
+  t.equal(floway?.vendor, 'customendpoint', 'the provider uses the customendpoint vendor');
+  t.ok(Array.isArray(floway?.models), 'the provider carries the model list');
+});
+
+test('opencode', 'PowerShell merges the converted provider into opencode.json', async t => {
+  if (!hostPwsh) skip('no PowerShell interpreter on this host');
+  if (!hostPython) skip('no python3 interpreter on this host');
+  const ws = makeWorkspace();
+  const run = await runPowerShellInstaller({ workspace: ws, baseUrl: modelServer.url, configuration: harnessConfig('opencode') });
+  t.equal(run.code, 0, `should succeed:\n${run.combined}`);
+  const config = JSON.parse(readFileSync(opencodeConfigPath(ws), 'utf8')) as Record<string, unknown>;
+  const provider = (config.provider as Record<string, Record<string, unknown>>).Floway;
+  t.ok((provider.options as Record<string, string>).baseURL === `${modelServer.url}/v1`, 'the provider points at this gateway');
+  t.ok(Boolean(provider.models), 'the provider carries the model map');
 });
 
 // --- run --------------------------------------------------------------------
