@@ -2,6 +2,7 @@ import {
   SETUP_BASH_CLAUDE,
   SETUP_BASH_CODEX,
   SETUP_BASH_COMMON,
+  SETUP_BASH_FLOWAY_CLI,
   SETUP_BASH_OMP,
   SETUP_BASH_PI,
   SETUP_NODE_JSONC_EDIT,
@@ -9,11 +10,12 @@ import {
   SETUP_POWERSHELL_CLAUDE,
   SETUP_POWERSHELL_CODEX,
   SETUP_POWERSHELL_COMMON,
+  SETUP_POWERSHELL_FLOWAY_CLI,
   SETUP_POWERSHELL_OMP,
   SETUP_POWERSHELL_PI,
 } from './script-assets.generated.ts';
 
-export type ScriptAgent = 'claude' | 'codex' | 'pi' | 'omp';
+export type ScriptAgent = 'claude' | 'codex' | 'pi' | 'omp' | 'floway-cli';
 export type ScriptLanguage = 'sh' | 'ps1';
 
 const bashNodeHelper = (name: string, file: string, source: string): string => `
@@ -55,5 +57,9 @@ export const SETUP_SCRIPT_BODIES = {
   pi: {
     sh: SETUP_BASH_COMMON + BASH_PI_PRELUDE + SETUP_BASH_PI,
     ps1: SETUP_POWERSHELL_COMMON + POWERSHELL_PI_PRELUDE + SETUP_POWERSHELL_PI,
+  },
+  'floway-cli': {
+    sh: SETUP_BASH_COMMON + SETUP_BASH_FLOWAY_CLI,
+    ps1: SETUP_POWERSHELL_COMMON + SETUP_POWERSHELL_FLOWAY_CLI,
   },
 } as const satisfies Record<ScriptAgent, Record<ScriptLanguage, string>>;

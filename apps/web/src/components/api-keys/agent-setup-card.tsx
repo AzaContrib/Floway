@@ -15,6 +15,7 @@ import { agentSetupCommand, useAgentSetup } from './use-agent-setup';
 import type { ApiKey, ControlPlaneModel } from '../../api/types';
 import claudeIconUrl from '../../assets/claude-color.svg';
 import codexIconUrl from '../../assets/codex.svg';
+import flowayCliIconUrl from '../../assets/floway-cli.svg';
 import ompIconUrl from '../../assets/omp.svg';
 import piIconUrl from '../../assets/pi.svg';
 import { fluentComponents } from '../../fluent';
@@ -31,7 +32,7 @@ import type { ClipboardCopy } from '../ui/use-copy-to-clipboard';
 import { type PiThinkingLevel, piThinkingLevelMap, piThinkingLevels } from '@floway-dev/agent-setup/browser';
 
 const { Button, Field, Option, Tab, TabList, Text } = fluentComponents;
-type Agent = 'claude' | 'codex' | 'pi' | 'omp';
+type Agent = 'claude' | 'codex' | 'pi' | 'omp' | 'floway-cli';
 type Platform = AgentSetupPlatform;
 // The option that stands for no override. Model overrides reject NUL at the
 // gateway boundary, so this UI-only value cannot collide with an opaque model
@@ -83,11 +84,12 @@ export function AgentSetupCard({ clipboard, initialApiKeyId, initialError, initi
 
     <div className={`grid ${PANE_GAP_CLASS} min-w-0 grid-cols-[190px_minmax(0,1fr)] max-[680px]:grid-cols-1`}>
       <nav className="grid content-start">
-        <TabList aria-label={t('dashboard.apiKeys.agentSetup.agent')} onTabSelect={(_, data) => setAgent(data.value === 'codex' || data.value === 'pi' || data.value === 'omp' ? data.value : 'claude')} selectedValue={agent} vertical>
+        <TabList aria-label={t('dashboard.apiKeys.agentSetup.agent')} onTabSelect={(_, data) => setAgent(data.value === 'codex' || data.value === 'pi' || data.value === 'omp' || data.value === 'floway-cli' ? data.value : 'claude')} selectedValue={agent} vertical>
           <AgentTab icon={claudeIconUrl} label={t('dashboard.apiKeys.configuration.claudeCode')} value="claude" />
           <AgentTab icon={codexIconUrl} label={t('dashboard.apiKeys.configuration.codex')} value="codex" />
           <AgentTab icon={piIconUrl} label={t('dashboard.apiKeys.configuration.pi')} value="pi" />
           <AgentTab icon={ompIconUrl} label={t('dashboard.apiKeys.configuration.omp')} value="omp" />
+          <AgentTab icon={flowayCliIconUrl} label={t('dashboard.apiKeys.configuration.flowayCli')} value="floway-cli" />
         </TabList>
       </nav>
 
@@ -171,6 +173,13 @@ function AgentConfigSnippets({ agent, apiKey, clipboard, configuration, onPlatfo
       <CodeBlock code={snippet} copyOutcome={clipboard.outcomeFor('agent-snippet-claude')} language="json" onCopy={() => clipboard.copy(snippet, 'agent-snippet-claude')} />
     </div>;
   }
+  if (agent === 'floway-cli') {
+    return <div className="grid gap-2 border-t border-t-solid border-fui-divider pt-4">
+      <Text size={200} className="text-fui-fg2">
+        <Trans components={{ path: <code className="font-mono mono-size-xs" /> }} i18nKey="dashboard.apiKeys.configuration.flowayCliHint" />
+      </Text>
+    </div>;
+  }
   // Both snippets are one platform's pair -- the config's auth command reads the
   // file the credential snippet writes -- so one choice drives them and each
   // block carries the picker, whichever the reader reaches first.
@@ -208,6 +217,12 @@ function AgentConfigurationFields({ agent, configuration, models, onChange }: {
     : rankAgentSetupModels(models, { family: 'codex' })[0];
   const effortOptions = codexModel?.chat?.reasoning?.effort?.supported ?? [];
   const patchPi = (patch: Partial<AgentSetupConfiguration['pi']>) => onChange(current => ({ ...current, pi: { ...current.pi, ...patch } }));
+
+  if (agent === 'floway-cli') {
+    return <Text size={200} className="text-fui-fg2">
+      <Trans components={{ path: <code className="font-mono mono-size-xs" /> }} i18nKey="dashboard.apiKeys.configuration.flowayCliHint" />
+    </Text>;
+  }
 
   if (agent === 'pi' || agent === 'omp') {
     const connection = configuration[agent];

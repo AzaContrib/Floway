@@ -23,7 +23,9 @@ import {
   SETUP_POWERSHELL_COMMON,
   SETUP_POWERSHELL_PI,
   SETUP_BASH_OMP,
+  SETUP_BASH_FLOWAY_CLI,
   SETUP_POWERSHELL_OMP,
+  SETUP_POWERSHELL_FLOWAY_CLI,
 } from '../../../src/script-assets.generated.ts';
 import { type ScriptAgent, SETUP_SCRIPT_BODIES } from '../../../src/script-assets.ts';
 
@@ -34,13 +36,13 @@ const prefixInput = (agent: ScriptAgent, configuration: AgentSetupConfiguration)
 export const shellLiteral = (value: string): string => `'${value.replaceAll("'", "'\\''")}'`;
 export const powerShellLiteral = (value: string): string => `'${value.replace(/'/g, "''")}'`;
 
-const AGENT_NAMES: Record<ScriptAgent, string> = { claude: 'Claude Code', codex: 'Codex', pi: 'Pi', omp: 'oh-my-pi' };
+const AGENT_NAMES: Record<ScriptAgent, string> = { claude: 'Claude Code', codex: 'Codex', pi: 'Pi', omp: 'oh-my-pi', 'floway-cli': 'floway-cli' };
 export const shellEntry = (agent: ScriptAgent): string => `main '${AGENT_NAMES[agent]}' "$@"`;
 export const powerShellEntry = (agent: ScriptAgent): string => `$global:LASTEXITCODE = Main '${AGENT_NAMES[agent]}'`;
 export const shellBody = (agent: ScriptAgent): string => SETUP_SCRIPT_BODIES[agent].sh;
 export const powerShellBody = (agent: ScriptAgent): string => SETUP_SCRIPT_BODIES[agent].ps1;
-export const ALL_BASH_FRAGMENTS = SETUP_BASH_COMMON + SETUP_BASH_CLAUDE + SETUP_BASH_CODEX + SETUP_BASH_PI + SETUP_BASH_OMP;
-export const ALL_POWERSHELL_FRAGMENTS = SETUP_POWERSHELL_COMMON + SETUP_POWERSHELL_CLAUDE + SETUP_POWERSHELL_CODEX + SETUP_POWERSHELL_PI + SETUP_POWERSHELL_OMP;
+export const ALL_BASH_FRAGMENTS = SETUP_BASH_COMMON + SETUP_BASH_CLAUDE + SETUP_BASH_CODEX + SETUP_BASH_PI + SETUP_BASH_OMP + SETUP_BASH_FLOWAY_CLI;
+export const ALL_POWERSHELL_FRAGMENTS = SETUP_POWERSHELL_COMMON + SETUP_POWERSHELL_CLAUDE + SETUP_POWERSHELL_CODEX + SETUP_POWERSHELL_PI + SETUP_POWERSHELL_OMP + SETUP_POWERSHELL_FLOWAY_CLI;
 
 // A fixed, highly greppable fake credential. Dedicated secrecy tests assert
 // that it never reaches installer output.

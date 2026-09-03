@@ -85,6 +85,10 @@ const leaseProjection = (record: AgentSetupRecord, publicScriptBasePath: string)
       sh: `${publicScriptBasePath}/${record.token}/pi.sh`,
       ps1: `${publicScriptBasePath}/${record.token}/pi.ps1`,
     },
+    'floway-cli': {
+      sh: `${publicScriptBasePath}/${record.token}/floway-cli.sh`,
+      ps1: `${publicScriptBasePath}/${record.token}/floway-cli.ps1`,
+    },
   },
 });
 
@@ -189,6 +193,8 @@ export const createAgentSetupPublicRoutes = (deps: AgentSetupPublicDeps) => {
     .on(['GET', 'HEAD'], '/:token/omp.sh', serveSetupScript('omp', 'sh'))
     .on(['GET', 'HEAD'], '/:token/omp.ps1', serveSetupScript('omp', 'ps1'))
     .on(['GET', 'HEAD'], '/:token/omp.js', serveExtension('omp'))
+    .on(['GET', 'HEAD'], '/:token/floway-cli.sh', serveSetupScript('floway-cli', 'sh'))
+    .on(['GET', 'HEAD'], '/:token/floway-cli.ps1', serveSetupScript('floway-cli', 'ps1'))
     // Consume every near-miss beneath a token-shaped path before the host's
     // middleware. A mistyped filename or HTTP method still carries the live
     // credential in its URL segment and must not fall through to access logs.

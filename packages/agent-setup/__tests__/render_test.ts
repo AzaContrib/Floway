@@ -142,6 +142,18 @@ describe('renderShellPrefix', () => {
     expect(withoutModel).not.toContain('SETUP_CODEX_');
   });
 
+  test('renders only the API key and label for floway-cli', () => {
+    const prefix = renderShellPrefix({ agent: 'floway-cli', apiKey: 'sk-raw-key', apiKeyName: 'Primary key', configuration: fullConfiguration });
+    expect(prefix).toBe([
+      'set +x',
+      "SETUP_API_KEY='sk-raw-key'",
+      "SETUP_API_KEY_NAME='Primary key'",
+      '',
+    ].join('\n'));
+    expect(prefix).not.toContain('SETUP_CLAUDE_');
+    expect(prefix).not.toContain('SETUP_CODEX_');
+  });
+
   test('propagates a NUL-rejecting failure from the API key', () => {
     expect(() => renderShellPrefix({
       agent: 'claude',
@@ -184,6 +196,18 @@ describe('renderPowerShellPrefix', () => {
     });
     expect(prefix).toContain("$SetupApiKey = 'a''b'");
     expect(prefix).toContain("$SetupCodexModel = 'x\ny\t€🚀'");
+  });
+
+  test('renders only the API key and label for floway-cli', () => {
+    const prefix = renderPowerShellPrefix({ agent: 'floway-cli', apiKey: 'sk-raw-key', apiKeyName: 'Primary key', configuration: fullConfiguration });
+    expect(prefix).toBe([
+      'Set-PSDebug -Off',
+      "$SetupApiKey = 'sk-raw-key'",
+      "$SetupApiKeyName = 'Primary key'",
+      '',
+    ].join('\n'));
+    expect(prefix).not.toContain('$SetupClaude');
+    expect(prefix).not.toContain('$SetupCodex');
   });
 
   test('propagates a NUL-rejecting failure from the API key', () => {

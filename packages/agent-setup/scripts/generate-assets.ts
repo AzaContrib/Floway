@@ -42,6 +42,7 @@ const scriptSources = {
       { name: 'SETUP_BASH_CODEX', file: 'installers/bash/codex.sh' },
       { name: 'SETUP_BASH_OMP', file: 'installers/bash/omp.sh' },
       { name: 'SETUP_BASH_PI', file: 'installers/bash/pi.sh' },
+      { name: 'SETUP_BASH_FLOWAY_CLI', file: 'installers/bash/floway-cli.sh' },
     ],
   },
   powershell: {
@@ -69,6 +70,7 @@ const scriptSources = {
       { name: 'SETUP_POWERSHELL_CODEX', file: 'installers/powershell/codex.ps1' },
       { name: 'SETUP_POWERSHELL_OMP', file: 'installers/powershell/omp.ps1' },
       { name: 'SETUP_POWERSHELL_PI', file: 'installers/powershell/pi.ps1' },
+      { name: 'SETUP_POWERSHELL_FLOWAY_CLI', file: 'installers/powershell/floway-cli.ps1' },
     ],
   },
 } as const satisfies Record<string, PlatformSources>;

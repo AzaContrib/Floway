@@ -18,6 +18,7 @@ export type RenderPrefixInput = RenderPrefixBase & (
   | { agent: 'pi' | 'omp'; extensionPath: string }
   | { agent: 'claude' }
   | { agent: 'codex' }
+  | { agent: 'floway-cli' }
 );
 
 const assertNoNul = (value: string): void => {
@@ -75,7 +76,7 @@ export const renderShellPrefix = (input: RenderPrefixInput): string => {
       ['SETUP_CODEX_MODEL', shellOptional(configuration.codex.model)],
       ['SETUP_CODEX_REASONING_EFFORT', shellOptional(configuration.codex.reasoningEffort)],
     );
-  } else {
+  } else if (input.agent === 'pi' || input.agent === 'omp') {
     assignments.push([input.agent === 'pi' ? 'SETUP_PI_MODEL' : 'SETUP_OMP_MODEL', shellOptional(configuration[input.agent].model)]);
     assignments.push(['SETUP_EXTENSION_PATH', input.extensionPath]);
     assignments.push([input.agent === 'pi' ? 'SETUP_PI_PROVIDER' : 'SETUP_OMP_PROVIDER', resolveAgentSetupProvider(configuration[input.agent].provider)]);
@@ -130,7 +131,7 @@ export const renderPowerShellPrefix = (input: RenderPrefixInput): string => {
       ['$SetupCodexModel', powerShellOptional(configuration.codex.model)],
       ['$SetupCodexReasoningEffort', powerShellOptional(configuration.codex.reasoningEffort)],
     );
-  } else {
+  } else if (input.agent === 'pi' || input.agent === 'omp') {
     assignments.push([input.agent === 'pi' ? '$SetupPiModel' : '$SetupOmpModel', powerShellOptional(configuration[input.agent].model)]);
     assignments.push(['$SetupExtensionPath', powerShellLiteral(input.extensionPath)]);
     assignments.push([input.agent === 'pi' ? '$SetupPiProvider' : '$SetupOmpProvider', powerShellLiteral(resolveAgentSetupProvider(configuration[input.agent].provider))]);

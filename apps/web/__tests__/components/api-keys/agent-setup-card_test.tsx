@@ -40,6 +40,7 @@ const lease = (apiKeyId: string): AgentSetupLease => ({
     codex: { sh: '/codex.sh', ps1: '/codex.ps1' },
     pi: { sh: '/pi.sh', ps1: '/pi.ps1' },
     omp: { sh: '/omp.sh', ps1: '/omp.ps1' },
+    'floway-cli': { sh: '/floway-cli.sh', ps1: '/floway-cli.ps1' },
   },
 });
 
@@ -157,6 +158,12 @@ describe('Agent Setup card fields', () => {
     const hint = screen.getByText(/^0 disables retries\./).textContent;
     expect(hint).toContain(agent === 'Pi' ? 'Pi defaults to 3 retries' : 'OMP defaults to 10 retries');
     expect(hint).not.toContain(agent === 'Pi' ? 'OMP' : 'Pi');
+  });
+
+  it('renders floway-cli tab with overview copy', () => {
+    renderInApp(<Host />);
+    act(() => { screen.getByRole('tab', { name: 'floway-cli' }).click(); });
+    expect(screen.getByText(/The installer downloads the floway CLI/i)).toBeTruthy();
   });
 
   it('keeps the configuration on screen while another key is being leased', () => {

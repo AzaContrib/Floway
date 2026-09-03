@@ -149,6 +149,7 @@ interface LeaseResponse {
     codex: { sh: string; ps1: string };
     pi: { sh: string; ps1: string };
     omp: { sh: string; ps1: string };
+    'floway-cli': { sh: string; ps1: string };
   };
 }
 
@@ -435,6 +436,18 @@ test('GET serves the PowerShell prefix + common and target-agent fragments', asy
   expect(body).toContain(SETUP_POWERSHELL_COMMON);
   expect(body).toContain(SETUP_POWERSHELL_CODEX);
   expect(body).not.toContain(SETUP_POWERSHELL_CLAUDE);
+});
+
+test('GET serves rendered floway-cli bash and powershell scripts', async () => {
+  const h = harness();
+  const lease = await create(h);
+  const sh = await (await h.request(lease.scripts['floway-cli'].sh, { method: 'GET' })).text();
+  expect(sh).toContain("SETUP_API_KEY='raw-key'");
+  expect(sh).toContain("main 'floway-cli' \"$@\"");
+
+  const ps1 = await (await h.request(lease.scripts['floway-cli'].ps1, { method: 'GET' })).text();
+  expect(ps1).toContain("$SetupApiKey = 'raw-key'");
+  expect(ps1).toContain("Main 'floway-cli'");
 });
 
 test('HEAD validates but returns an empty body', async () => {
