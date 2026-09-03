@@ -92,6 +92,10 @@ const leaseProjection = (record: AgentSetupRecord, publicScriptBasePath: string)
       sh: `${publicScriptBasePath}/${record.token}/opencode.sh`,
       ps1: `${publicScriptBasePath}/${record.token}/opencode.ps1`,
     },
+    'floway-cli': {
+      sh: `${publicScriptBasePath}/${record.token}/floway-cli.sh`,
+      ps1: `${publicScriptBasePath}/${record.token}/floway-cli.ps1`,
+    },
   },
 });
 
@@ -183,12 +187,12 @@ export const createAgentSetupPublicRoutes = (deps: AgentSetupPublicDeps) => {
     .on(['GET', 'HEAD'], '/:token/codex.ps1', serveSetupScript('codex', 'ps1'))
     .on(['GET', 'HEAD'], '/:token/omp.sh', serveSetupScript('omp', 'sh'))
     .on(['GET', 'HEAD'], '/:token/omp.ps1', serveSetupScript('omp', 'ps1'))
-    .on(['GET', 'HEAD'], '/:token/vscode.sh', serveSetupScript('vscode', 'sh'))
-    .on(['GET', 'HEAD'], '/:token/vscode.ps1', serveSetupScript('vscode', 'ps1'))
-    .on(['GET', 'HEAD'], '/:token/zed.sh', serveSetupScript('zed', 'sh'))
-    .on(['GET', 'HEAD'], '/:token/zed.ps1', serveSetupScript('zed', 'ps1'))
     .on(['GET', 'HEAD'], '/:token/opencode.sh', serveSetupScript('opencode', 'sh'))
     .on(['GET', 'HEAD'], '/:token/opencode.ps1', serveSetupScript('opencode', 'ps1'))
+    .on(['GET', 'HEAD'], '/:token/floway-cli.sh', serveSetupScript('floway-cli', 'sh'))
+    .on(['GET', 'HEAD'], '/:token/floway-cli.ps1', serveSetupScript('floway-cli', 'ps1'))
+    .on(['GET', 'HEAD'], '/:token/zed.sh', serveSetupScript('zed', 'sh'))
+    .on(['GET', 'HEAD'], '/:token/zed.ps1', serveSetupScript('zed', 'ps1'))
     // Consume every near-miss beneath a token-shaped path before the host's
     // middleware. A mistyped filename or HTTP method still carries the live
     // credential in its URL segment and must not fall through to access logs.

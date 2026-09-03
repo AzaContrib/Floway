@@ -35,6 +35,7 @@ import {
   SETUP_BASH_VSCODE,
   SETUP_BASH_ZED,
   SETUP_BASH_OPENCODE,
+  SETUP_BASH_FLOWAY_CLI,
   SETUP_POWERSHELL_CLAUDE,
   SETUP_POWERSHELL_CODEX,
   SETUP_POWERSHELL_COMMON,
@@ -42,6 +43,7 @@ import {
   SETUP_POWERSHELL_VSCODE,
   SETUP_POWERSHELL_ZED,
   SETUP_POWERSHELL_OPENCODE,
+  SETUP_POWERSHELL_FLOWAY_CLI,
 } from '../src/script-assets.generated.ts';
 import { type ScriptAgent, SETUP_SCRIPT_BODIES } from '../src/script-assets.ts';
 
@@ -54,13 +56,14 @@ const AGENT_NAMES: Record<ScriptAgent, string> = {
   vscode: 'VSCode',
   zed: 'Zed',
   opencode: 'opencode',
+  'floway-cli': 'floway-cli',
 };
 const shellEntry = (agent: ScriptAgent): string => `main '${AGENT_NAMES[agent]}' "$@"`;
 const powerShellEntry = (agent: ScriptAgent): string => `$global:LASTEXITCODE = Main '${AGENT_NAMES[agent]}'`;
 const shellBody = (agent: ScriptAgent): string => SETUP_SCRIPT_BODIES[agent].sh;
 const powerShellBody = (agent: ScriptAgent): string => SETUP_SCRIPT_BODIES[agent].ps1;
-const ALL_BASH_FRAGMENTS = SETUP_BASH_COMMON + SETUP_BASH_CLAUDE + SETUP_BASH_CODEX + SETUP_BASH_OMP + SETUP_BASH_VSCODE + SETUP_BASH_ZED + SETUP_BASH_OPENCODE;
-const ALL_POWERSHELL_FRAGMENTS = SETUP_POWERSHELL_COMMON + SETUP_POWERSHELL_CLAUDE + SETUP_POWERSHELL_CODEX + SETUP_POWERSHELL_OMP + SETUP_POWERSHELL_VSCODE + SETUP_POWERSHELL_ZED + SETUP_POWERSHELL_OPENCODE;
+const ALL_BASH_FRAGMENTS = SETUP_BASH_COMMON + SETUP_BASH_CLAUDE + SETUP_BASH_CODEX + SETUP_BASH_OMP + SETUP_BASH_VSCODE + SETUP_BASH_ZED + SETUP_BASH_OPENCODE + SETUP_BASH_FLOWAY_CLI;
+const ALL_POWERSHELL_FRAGMENTS = SETUP_POWERSHELL_COMMON + SETUP_POWERSHELL_CLAUDE + SETUP_POWERSHELL_CODEX + SETUP_POWERSHELL_OMP + SETUP_POWERSHELL_VSCODE + SETUP_POWERSHELL_ZED + SETUP_POWERSHELL_OPENCODE + SETUP_POWERSHELL_FLOWAY_CLI;
 
 // A fixed, highly greppable fake credential. Every test asserts this string
 // never reaches the installer's stdout/stderr, so a real leak is unmistakable.

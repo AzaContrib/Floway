@@ -71,9 +71,11 @@ export const renderShellPrefix = (input: RenderPrefixInput): string => {
       ['SETUP_CODEX_REASONING_EFFORT', shellOptional(configuration.codex.reasoningEffort)],
     );
   }
-  // The harness agents (omp, vscode, zed, opencode) carry no per-agent
-  // configuration: their installers fetch the model list and convert it, so
-  // the API key and its label are the only values they need.
+  // The harness agents (omp, vscode, zed, opencode, floway-cli) carry no
+  // per-agent configuration: their installers fetch the model list and
+  // convert it, so the API key and its label are the only values they need.
+  // floway-cli additionally reads SETUP_ENDPOINT, which the dashboard's
+  // agentSetupCommand exports before the script body runs.
   const lines = assignments.map(([name, value]) => `${name}=${shellLiteral(value)}`);
   return `set +x\n${lines.join('\n')}\n`;
 };
@@ -120,9 +122,11 @@ export const renderPowerShellPrefix = (input: RenderPrefixInput): string => {
       ['$SetupCodexReasoningEffort', powerShellOptional(configuration.codex.reasoningEffort)],
     );
   }
-  // The harness agents (omp, vscode, zed, opencode) carry no per-agent
-  // configuration: their installers fetch the model list and convert it, so
-  // the API key and its label are the only values they need.
+  // The harness agents (omp, vscode, zed, opencode, floway-cli) carry no
+  // per-agent configuration: their installers fetch the model list and
+  // convert it, so the API key and its label are the only values they need.
+  // floway-cli additionally reads $SetupEndpoint, which the dashboard's
+  // agentSetupCommand assigns before the script body runs.
   const lines = assignments.map(([name, value]) => `${name} = ${value}`);
   return `Set-PSDebug -Off\n${lines.join('\n')}\n`;
 };

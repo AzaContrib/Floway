@@ -393,6 +393,8 @@ const zhHansCN = {
           vscodeHint: '安装脚本会打印 JSON，供粘贴到 <path>Chat: Open Language Models (JSON)</path>。',
           zedHint: '安装脚本会将模型列表合并到 <path>~/.config/zed/global_settings.json</path>。',
           opencodeHint: '安装脚本会将 provider 合并到 <path>~/.config/opencode/opencode.json</path>。',
+          flowayCli: 'floway-cli',
+          flowayCliHint: '安装脚本会下载 floway CLI，并一次性配置上述所有 Agent；之后可用 <path>floway update</path> 和 <path>floway uninstall</path> 管理。',
         },
         agentSetup: { agent: 'Agent', accessMethod: '接入方式', setupTab: '自动配置脚本', snippetsTab: '配置文件片段', platform: '操作系统', commandPending: '正在准备安装命令…', modelSelection: '模型选择', miscSettings: '杂项设置', selectKey: '请先在上方选择 API 密钥。', noKey: '请先创建 API 密钥。', expired: '此安装链接已过期，请重试生成新链接。', timedOut: '网关未在规定时间内响应。', retry: '重试', expires: '页面可见时链接会自动续期，离开后即过期。', defaultModel: '默认模型', fableModel: 'Fable 模型', opusModel: 'Opus 模型', sonnetModel: 'Sonnet 模型', haikuModel: 'Haiku 模型', reasoningEffort: '思考强度', modelDefault: '默认', noModelMatches: '没有匹配的模型', modelDiscovery: 'Gateway 模型发现', modelDiscoveryHint: '允许 Claude Code 从此 Floway gateway 发现可用模型。', cleanupRetention: '清理保留期', cleanupRetentionHint: '设置 Claude Code 本地会话数据的清理保留期。', cleanupDays: '{{count, number}} 天', optOutAiAttribution: '停用 Claude Code AI 归属标记', optOutAiAttributionHint: '移除提交和 Pull Request 中的 Claude Code 归属信息（"Co-Authored-By"），并隐藏会话链接。', disableAutoMemory: '停用自动记忆', disableAutoMemoryHint: '禁止 Claude Code 读写其自动记忆目录。', disableAgentView: '停用 Agent 视图', disableAgentViewHint: '关闭后台 agent 与 agent 视图，包括 `claude agents`、`--bg` 和 `/background`。', harnessHint: '运行上面的安装脚本；它会从本 gateway 获取模型列表并为你写入或打印设置。' },
         rotate: {

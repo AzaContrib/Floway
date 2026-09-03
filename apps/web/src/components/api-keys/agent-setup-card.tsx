@@ -20,6 +20,7 @@ import ompIconUrl from '../../assets/omp.svg';
 import opencodeIconUrl from '../../assets/opencode.svg';
 import vscodeIconUrl from '../../assets/vscode.svg';
 import zedIconUrl from '../../assets/zed.svg';
+import flowayCliIconUrl from '../../assets/floway-cli.svg';
 import { fluentComponents } from '../../fluent';
 import { Trans, useTranslation } from '../../i18n/translation';
 import { filterModelOptions } from '../../lib/model-query';
@@ -33,7 +34,7 @@ import { SwitchSetting } from '../ui/switch-setting';
 import type { ClipboardCopy } from '../ui/use-copy-to-clipboard';
 
 const { Button, Field, Option, Tab, TabList, Text } = fluentComponents;
-type Agent = 'claude' | 'codex' | 'omp' | 'vscode' | 'zed' | 'opencode';
+type Agent = 'claude' | 'codex' | 'omp' | 'vscode' | 'zed' | 'opencode' | 'floway-cli';
 type Platform = AgentSetupPlatform;
 // The harness agents convert every model the gateway serves, so they take no
 // model selection or per-agent configuration.
@@ -91,6 +92,7 @@ export function AgentSetupCard({ clipboard, initialApiKeyId, initialError, initi
           <AgentTab icon={<img alt="" className="h-4 w-4" src={vscodeIconUrl} />} label={t('dashboard.apiKeys.configuration.vscode')} value="vscode" />
           <AgentTab icon={<img alt="" className="h-4 w-4" src={zedIconUrl} />} label={t('dashboard.apiKeys.configuration.zed')} value="zed" />
           <AgentTab icon={<img alt="" className="h-4 w-4" src={opencodeIconUrl} />} label={t('dashboard.apiKeys.configuration.opencode')} value="opencode" />
+          <AgentTab icon={<img alt="" className="h-4 w-4" src={flowayCliIconUrl} />} label={t('dashboard.apiKeys.configuration.flowayCli')} value="floway-cli" />
         </TabList>
       </nav>
 
@@ -201,7 +203,8 @@ function AgentConfigSnippets({ agent, apiKey, clipboard, configuration, onPlatfo
     vscode: 'dashboard.apiKeys.configuration.vscodeHint',
     zed: 'dashboard.apiKeys.configuration.zedHint',
     opencode: 'dashboard.apiKeys.configuration.opencodeHint',
-  } as const;
+    'floway-cli': 'dashboard.apiKeys.configuration.flowayCliHint',
+  } as const satisfies Partial<Record<Agent, string>>;
   const hintKey = harnessHints[agent];
   return <div className="grid gap-2 border-t border-t-solid border-fui-divider pt-4">
     <Text size={200} className="text-fui-fg2">

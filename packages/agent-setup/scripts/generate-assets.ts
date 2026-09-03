@@ -60,6 +60,7 @@ const scriptSources = {
       { name: 'SETUP_BASH_VSCODE', file: 'installers/bash/vscode.sh' },
       { name: 'SETUP_BASH_ZED', file: 'installers/bash/zed.sh' },
       { name: 'SETUP_BASH_OPENCODE', file: 'installers/bash/opencode.sh' },
+      { name: 'SETUP_BASH_FLOWAY_CLI', file: 'installers/bash/floway-cli.sh' },
     ],
   },
   powershell: {
@@ -90,6 +91,7 @@ const scriptSources = {
       { name: 'SETUP_POWERSHELL_VSCODE', file: 'installers/powershell/vscode.ps1' },
       { name: 'SETUP_POWERSHELL_ZED', file: 'installers/powershell/zed.ps1' },
       { name: 'SETUP_POWERSHELL_OPENCODE', file: 'installers/powershell/opencode.ps1' },
+      { name: 'SETUP_POWERSHELL_FLOWAY_CLI', file: 'installers/powershell/floway-cli.ps1' },
     ],
   },
 } as const satisfies Record<string, PlatformSources>;

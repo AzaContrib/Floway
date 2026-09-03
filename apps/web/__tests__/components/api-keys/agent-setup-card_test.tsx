@@ -38,6 +38,7 @@ const lease = (apiKeyId: string): AgentSetupLease => ({
     vscode: { sh: '/vscode.sh', ps1: '/vscode.ps1' },
     zed: { sh: '/zed.sh', ps1: '/zed.ps1' },
     opencode: { sh: '/opencode.sh', ps1: '/opencode.ps1' },
+    'floway-cli': { sh: '/floway-cli.sh', ps1: '/floway-cli.ps1' },
   },
 });
 
