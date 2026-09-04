@@ -5,8 +5,8 @@
 # rendered prefix carries. The non-interactive install reads
 # SETUP_ENDPOINT/SETUP_API_KEY, writes the same files the per-agent fragments
 # write, and records its own state for `floway update`/`floway uninstall`.
-# Ref: https://github.com/hykilpikonna/floway-cli
-$FlowayCliRepo = 'hykilpikonna/floway-cli'
+# Ref: https://github.com/AzaContrib/floway-cli
+$FlowayCliRepo = 'AzaContrib/floway-cli'
 
 function Install-SetupFlowayCli {
   if ($env:AGENT_SETUP_TEST_INSTALL_FLOWAY_CLI_SCRIPT) {

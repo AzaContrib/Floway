@@ -5,8 +5,8 @@
 # rendered prefix carries. The non-interactive install reads
 # SETUP_ENDPOINT/SETUP_API_KEY, writes the same files the per-agent fragments
 # write, and records its own state for `floway update`/`floway uninstall`.
-# Ref: https://github.com/hykilpikonna/floway-cli
-FLOWAY_CLI_REPO='hykilpikonna/floway-cli'
+# Ref: https://github.com/AzaContrib/floway-cli
+FLOWAY_CLI_REPO='AzaContrib/floway-cli'
 
 # Reuse the harness download discipline: refuse HTML (captive portals) and
 # empty bodies before anything executes.
