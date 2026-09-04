@@ -38,13 +38,19 @@ function Get-SetupFlowayCliExe {
   return $exe
 }
 
-# The binary's own installer consumes SETUP_ENDPOINT/SETUP_API_KEY, configures
-# every harness, and records its state so `floway update` and `floway
-# uninstall` manage the result from then on.
+# The binary's own installer takes the credentials as flags (matching the bash
+# fragment), configures every harness, and records its state so `floway update`
+# and `floway uninstall` manage the result from then on.
 function Set-SetupAgent {
   $exe = Get-SetupFlowayCliExe
   $timeoutSeconds = Get-SetupTimeoutSeconds 600
-  $result = Invoke-SetupProcess -Exe $exe -Arguments @('install', '--agents', 'all', '--non-interactive') -TimeoutSeconds $timeoutSeconds
+  $result = Invoke-SetupProcess -Exe $exe -Arguments @(
+    'install',
+    '--endpoint', $SetupEndpoint,
+    '--api-key', $SetupApiKey,
+    '--agents', 'all',
+    '--non-interactive'
+  ) -TimeoutSeconds $timeoutSeconds
   if ($result.ExitCode -ne 0) { Stop-Setup 'floway install failed; see its output above.' }
   Write-SetupInfo "Configured via ``floway install``; manage it with ``floway update`` and ``floway uninstall``."
   Write-SetupAgentNotice 'Completed Agent Setup' 'floway-cli'

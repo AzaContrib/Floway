@@ -60,13 +60,18 @@ floway_cli_ensure_installed() {
   command -v floway >/dev/null 2>&1
 }
 
-# Run the binary's own installer over the prefix credentials. `--agents all`
-# configures every harness; the CLI records its state so `floway update` and
-# `floway uninstall` manage the result from then on.
+# Run the binary's own installer over the prefix credentials. main.sh strips the
+# export attribute from SETUP_* so child processes never inherit the key, so the
+# values are passed as flags instead; the CLI treats argv identically to env and
+# records its state so `floway update` and `floway uninstall` manage the result.
 floway_cli_write_settings() {
   _fcw_dir="$(command -v floway || printf '%s' "$HOME/.local/bin/floway")"
   _fcw_timeout=${AGENT_SETUP_TEST_TIMEOUT_SECONDS:-600}
-  if ! _run_with_timeout "$_fcw_timeout" "$_fcw_dir" install --agents all --non-interactive </dev/null; then
+  if ! _run_with_timeout "$_fcw_timeout" "$_fcw_dir" install \
+      --endpoint "$SETUP_ENDPOINT" \
+      --api-key "$SETUP_API_KEY" \
+      --agents all \
+      --non-interactive </dev/null; then
     out_error 'floway install failed; see its output above.'
     return 1
   fi
