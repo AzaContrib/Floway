@@ -46,6 +46,8 @@ import type { UpstreamModelConfig } from '@floway-dev/provider/browser';
 
 const {
   Button,
+  MessageBar,
+  MessageBarBody,
   Spinner,
   Tab,
   TabList,
@@ -263,7 +265,9 @@ function ModelsWorkspace({ detailSection, discovered, modelSelection, modelsErro
   const { append, fields, remove, replace } = useFieldArray({ control, name: 'manualModels' });
   const manual = useWatch({ control, name: 'manualModels' });
   const config = useWatch({ control, name: 'config' });
+  const modelFilterMode = useWatch({ control, name: 'modelFilterMode' });
   const disabled = useWatch({ control, name: 'disabledPublicModelIds' });
+  const enabled = useWatch({ control, name: 'enabledPublicModelIds' });
   const upstreamFlags = useWatch({ control, name: 'flagOverrides' });
   const deleteDialog = useDialogInvocation<ModelRow>();
   const [pendingManualUpstreamModelId, setPendingManualUpstreamModelId] = useState<string | null>(null);
@@ -297,7 +301,15 @@ function ModelsWorkspace({ detailSection, discovered, modelSelection, modelsErro
   const activeDetailRow = selectedRow ?? pendingManualRow;
   const filtered = rows.filter(row => `${row.config.display_name ?? ''} ${publicModelId(row.config)} ${row.config.upstreamModelId}`.toLowerCase().includes(search.toLowerCase()));
 
-  const setEnabled = (id: string, enabled: boolean) => setValue('disabledPublicModelIds', enabled ? disabled.filter(item => item !== id) : [...new Set([...disabled, id])], { shouldDirty: true });
+  const isModelEnabled = (id: string) => modelFilterMode === 'whitelist' ? enabled.includes(id) : !disabled.includes(id);
+
+  const setModelEnabled = (id: string, isEnabled: boolean) => {
+    if (modelFilterMode === 'whitelist') {
+      setValue('enabledPublicModelIds', isEnabled ? [...new Set([...enabled, id])] : enabled.filter(item => item !== id), { shouldDirty: true });
+    } else {
+      setValue('disabledPublicModelIds', isEnabled ? disabled.filter(item => item !== id) : [...new Set([...disabled, id])], { shouldDirty: true });
+    }
+  };
   const addModel = () => {
     const manualIndex = manual.length;
     append({
@@ -435,6 +447,11 @@ function ModelsWorkspace({ detailSection, discovered, modelSelection, modelsErro
         </pre>}
       </div>
     </OutcomeMessageBar>}
+    {modelFilterMode === 'whitelist' && (
+      <MessageBar intent="info">
+        <MessageBarBody>{t('dashboard.upstreamEditor.models.whitelistNotice')}</MessageBarBody>
+      </MessageBar>
+    )}
     <Input value={search} onChange={(_, data) => setSearch(data.value)} placeholder={t('dashboard.upstreamEditor.models.search')} />
     <ScrollArea axes="horizontal" className="min-w-0">
       <Table aria-label={t('dashboard.upstreamEditor.models.title')} className="w-full min-w-[664px]">
@@ -442,7 +459,7 @@ function ModelsWorkspace({ detailSection, discovered, modelSelection, modelsErro
         <TableHeader><TableRow><TableCentredHeader>{t('dashboard.upstreamEditor.models.enabled')}</TableCentredHeader><TableHeaderCell>{t('dashboard.upstreamEditor.models.name')}</TableHeaderCell><TableCentredHeader>{t('dashboard.upstreamEditor.models.kind')}</TableCentredHeader><TableHeaderCell>{t('dashboard.upstreamEditor.models.id')}</TableHeaderCell><TableCentredHeader>{t('dashboard.upstreamEditor.models.source')}</TableCentredHeader><TableActionsHeader /></TableRow></TableHeader>
         <TableBody>{filtered.length === 0 ? <TableRow><TableCell colSpan={6}><EmptyStateLine>{t('dashboard.upstreamEditor.models.noMatches')}</EmptyStateLine></TableCell></TableRow> : filtered.map(row => {
           const id = publicModelId(row.config); return <TableRow className="h-14" key={row.key}>
-            <TableCentredCell><Switch aria-label={t('dashboard.upstreamEditor.models.enabledFor', { name: row.config.display_name ?? id })} checked={!disabled.includes(id)} readOnly={permissionReadOnly || readOnly} onChange={(_, data) => setEnabled(id, data.checked)} /></TableCentredCell>
+            <TableCentredCell><Switch aria-label={t('dashboard.upstreamEditor.models.enabledFor', { name: row.config.display_name ?? id })} checked={isModelEnabled(id)} readOnly={permissionReadOnly || readOnly} onChange={(_, data) => setModelEnabled(id, data.checked)} /></TableCentredCell>
             <TableCell className="overflow-hidden">
               <TruncationTooltip content={row.config.display_name ?? id} relationship="label">
                 {measureRef => <RowTitleButton onClick={() => onOpenModel({ locator: row.config.upstreamModelId, manualIndex: row.manualIndex, rowKey: row.key })} ref={measureRef}>

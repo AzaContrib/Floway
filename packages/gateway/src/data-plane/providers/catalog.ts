@@ -3,7 +3,7 @@ import { readUpstreamModelsSnapshotAndScheduleRefresh, MODEL_CATALOG_REVISION } 
 import type { GatewayProvider } from './registry.ts';
 import type { ModelsRefreshScheduler } from '../../execution/models-refresh.ts';
 import { kindForEndpoints, type OpaqueBlobCompatibilityScope } from '@floway-dev/protocols/common';
-import type { InternalModel, Provider, ProviderModel, UpstreamChatModelConfig, UpstreamRecord } from '@floway-dev/provider';
+import { isModelAllowed, type InternalModel, type Provider, type ProviderModel, type UpstreamChatModelConfig, type UpstreamRecord } from '@floway-dev/provider';
 
 interface ProviderModelsResult {
   models: InternalModel[];
@@ -131,18 +131,22 @@ const collectProviderModels = (
     if (cachedError) {
       failedUpstreams.push(instance.name);
     }
-    // Operator-disabled public model ids vanish entirely for this upstream:
+    // Operator-filtered public model ids vanish entirely for this upstream:
     // dropped before they reach the catalog map, so they appear in no /models
-    // listing and resolve to nothing for routing. The disable is per-upstream,
+    // listing and resolve to nothing for routing. The filter is per-upstream,
     // so the same id can still surface from another upstream that allows it.
-    // The disable matches the pre-prefix public id — the id the provider's
+    // The filter matches the pre-prefix public id — the id the provider's
     // own catalog projection publishes, before this loop surfaces it in each
-    // listed form — so a disabled `gpt-4o` hides both `gpt-4o` and
+    // listed form — so a filtered `gpt-4o` hides both `gpt-4o` and
     // `<prefix>gpt-4o` from this upstream's contribution.
-    const disabled = new Set(instance.disabledPublicModelIds);
+    const filter = {
+      modelFilterMode: instance.modelFilterMode,
+      disabledPublicModelIds: new Set(instance.disabledPublicModelIds),
+      enabledPublicModelIds: new Set(instance.enabledPublicModelIds),
+    };
     for (const providerModel of providedModels) {
       if (!providerModel.id) continue;
-      if (disabled.has(providerModel.id)) continue;
+      if (!isModelAllowed(filter, providerModel.id)) continue;
 
       // Each surface form the upstream chose to list becomes its own catalog
       // entry. The unprefixed surface keeps the original ProviderModel; the
@@ -170,7 +174,7 @@ const collectProviderModels = (
 };
 
 // How many catalog entries this upstream's stored catalog would surface, under
-// the surfacing rules the loop above applies: an operator-disabled id
+// the surfacing rules the loop above applies: an operator-filtered id
 // contributes nothing, and a prefix policy contributes one entry per listed
 // form. Null when the row holds no catalog written under the current revision.
 //
@@ -181,9 +185,13 @@ const collectProviderModels = (
 export const storedCatalogSize = (record: UpstreamRecord): number | null => {
   const cache = record.modelsCache;
   if (cache?.revision !== MODEL_CATALOG_REVISION) return null;
-  const disabled = new Set(record.disabledPublicModelIds);
+  const filter = {
+    modelFilterMode: record.modelFilterMode,
+    disabledPublicModelIds: new Set(record.disabledPublicModelIds),
+    enabledPublicModelIds: new Set(record.enabledPublicModelIds),
+  };
   const surfacedForms = record.modelPrefix?.listed.length ?? 1;
-  return cache.models.filter(model => model.id && !disabled.has(model.id)).length * surfacedForms;
+  return cache.models.filter(model => model.id && isModelAllowed(filter, model.id)).length * surfacedForms;
 };
 
 // Public-facing model-id ordering, applied to the real-model slice of the

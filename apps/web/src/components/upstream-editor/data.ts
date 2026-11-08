@@ -67,7 +67,9 @@ export interface UpstreamEditorValues {
   hue: UpstreamRecord['hue'];
   proxyFallbackList: UpstreamRecord['proxy_fallback_list'];
   modelPrefix: UpstreamRecord['model_prefix'];
+  modelFilterMode: UpstreamRecord['model_filter_mode'];
   disabledPublicModelIds: string[];
+  enabledPublicModelIds: string[];
   flagOverrides: UpstreamRecord['flag_overrides'];
   config: UpstreamRecord['config'];
   state: UpstreamRecord['state'];
@@ -223,7 +225,9 @@ export const valuesFromRecord = (record: UpstreamRecord): UpstreamEditorValues =
     hue: record.hue,
     proxyFallbackList: structuredClone(record.proxy_fallback_list).map(entry => withRegisteredKey('colos', entry)),
     modelPrefix: structuredClone(record.model_prefix),
+    modelFilterMode: record.model_filter_mode ?? 'blacklist',
     disabledPublicModelIds: [...record.disabled_public_model_ids],
+    enabledPublicModelIds: [...(record.enabled_public_model_ids ?? [])],
     flagOverrides: record.flag_overrides,
     config,
     state: structuredClone(record.state),
@@ -273,7 +277,9 @@ export const previewRecord = (record: UpstreamRecord, values: UpstreamEditorValu
     state: values.state,
     proxy_fallback_list: values.proxyFallbackList,
     model_prefix: values.modelPrefix,
+    model_filter_mode: values.modelFilterMode,
     disabled_public_model_ids: values.disabledPublicModelIds,
+    enabled_public_model_ids: values.enabledPublicModelIds,
     flag_overrides: values.flagOverrides,
   };
 };
@@ -288,7 +294,9 @@ export const createBody = (record: UpstreamRecord, values: UpstreamEditorValues)
     usage_refresh_interval_minutes: values.usageRefreshIntervalMinutes,
     hue: values.hue,
     flag_overrides: values.flagOverrides,
+    model_filter_mode: values.modelFilterMode,
     disabled_public_model_ids: values.disabledPublicModelIds,
+    enabled_public_model_ids: values.enabledPublicModelIds,
     proxy_fallback_list: values.proxyFallbackList,
     model_prefix: values.modelPrefix,
     config: configFromValues(record, values),
@@ -306,7 +314,9 @@ export const updateBody = (record: UpstreamRecord, values: UpstreamEditorValues,
         : { models: structuredClone(values.manualModels) }
       : undefined;
     return {
+      model_filter_mode: values.modelFilterMode,
       disabled_public_model_ids: values.disabledPublicModelIds,
+      enabled_public_model_ids: values.enabledPublicModelIds,
       ...(config === undefined ? {} : { config }),
     } as UpdateUpstreamBody;
   }
@@ -316,7 +326,9 @@ export const updateBody = (record: UpstreamRecord, values: UpstreamEditorValues,
     usage_refresh_interval_minutes: values.usageRefreshIntervalMinutes,
     hue: values.hue,
     flag_overrides: values.flagOverrides,
+    model_filter_mode: values.modelFilterMode,
     disabled_public_model_ids: values.disabledPublicModelIds,
+    enabled_public_model_ids: values.enabledPublicModelIds,
     proxy_fallback_list: values.proxyFallbackList,
     model_prefix: values.modelPrefix,
     ...(manualModelsSupported(record) ? { config: configFromValues(record, values) } : {}),

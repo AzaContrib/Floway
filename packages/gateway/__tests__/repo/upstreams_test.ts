@@ -18,7 +18,9 @@ const upstream = (overrides: Partial<UpstreamRecord> & Pick<UpstreamRecord, 'id'
   config: { nested: { value: overrides.id }, endpoints: { openaiChatCompletions: {} } },
   state: null,
   flagOverrides: {},
+  modelFilterMode: 'blacklist',
   disabledPublicModelIds: [],
+  enabledPublicModelIds: [],
   proxyFallbackList: [],
   modelPrefix: null,
   modelsCache: null,
@@ -76,7 +78,9 @@ test('memory upstream repo inserts, replaces, lists, deletes, and clears rows', 
     updatedAt: '2026-05-21T10:00:04.000Z',
     config: { nested: { value: 'updated' }, endpoints: { openaiResponses: {} } },
     flagOverrides: { 'strip-prompt-cache-key': true },
+    modelFilterMode: 'blacklist',
     disabledPublicModelIds: [],
+    enabledPublicModelIds: [],
   });
   await saveUpstreamForTest(repo, updatedCustom);
 
@@ -114,7 +118,9 @@ test('memory upstream repo deeply clones configs and flag overrides at the repo 
       },
     },
     flagOverrides: { 'vendor-deepseek': true, 'rewrite-developer-to-system': true },
+    modelFilterMode: 'blacklist',
     disabledPublicModelIds: [],
+    enabledPublicModelIds: [],
   });
 
   await saveUpstreamForTest(repo, original);
@@ -153,7 +159,9 @@ test('memory upstream repo sorts flag overrides by key when inserting rows', asy
       sortOrder: 0,
       createdAt: '2026-05-21T10:00:00.000Z',
       flagOverrides: { 'vendor-deepseek': true, 'rewrite-developer-to-system': false, 'anthropic-messages-web-search-shim': true },
+      modelFilterMode: 'blacklist',
       disabledPublicModelIds: [],
+      enabledPublicModelIds: [],
     }));
 
   assertEquals((await repo.getById('up_copilot_fixes'))?.flagOverrides, { 'rewrite-developer-to-system': false, 'anthropic-messages-web-search-shim': true, 'vendor-deepseek': true });
@@ -214,7 +222,9 @@ const exerciseSqlUpstreamRepo = async (repo: UpstreamRepo) => {
     updatedAt: '2026-05-21T10:00:02.000Z',
     config: { baseUrl: 'https://custom.example/v1', authStyle: 'bearer', apiKey: 'sk-custom', endpoints: { openaiChatCompletions: {} } },
     flagOverrides: { 'vendor-deepseek': true, 'rewrite-developer-to-system': true },
+    modelFilterMode: 'blacklist',
     disabledPublicModelIds: [],
+    enabledPublicModelIds: [],
   });
   const copilot = upstream({
     id: 'up_copilot_sql',
@@ -256,7 +266,9 @@ const exerciseSqlUpstreamRepo = async (repo: UpstreamRepo) => {
     updatedAt: '2026-05-21T10:00:04.000Z',
     config: { baseUrl: 'https://updated.example/v1', authStyle: 'bearer', apiKey: 'sk-updated', endpoints: { openaiResponses: {} } },
     flagOverrides: { 'anthropic-messages-web-search-shim': true, 'rewrite-developer-to-system': true },
+    modelFilterMode: 'blacklist',
     disabledPublicModelIds: [],
+    enabledPublicModelIds: [],
   });
   assertEquals(
     (await repo.list()).map(row => [row.id, row.name, row.enabled]),
@@ -457,7 +469,9 @@ test('SQL upstream repo round-trips a non-null model_prefix', async () => {
     config: { baseUrl: 'https://example.com', bearerToken: 'sk', authStyle: 'bearer', endpoints: { openaiChatCompletions: {} }, modelsFetch: { enabled: true } },
     state: null,
     flagOverrides: {},
+    modelFilterMode: 'blacklist',
     disabledPublicModelIds: [],
+    enabledPublicModelIds: [],
     proxyFallbackList: [],
     modelPrefix: { prefix: 'or/', addressable: ['unprefixed', 'prefixed'], listed: ['prefixed'] },
     modelsCache: null,
@@ -1022,7 +1036,9 @@ type FakeUpstreamRow = {
   state_json: string | null;
   models_cache_json: string | null;
   flag_overrides: string;
+  model_filter_mode?: string;
   disabled_public_model_ids: string;
+  enabled_public_model_ids?: string;
   proxy_fallback_list_json: string;
   model_prefix_json: string | null;
   hue: number;
@@ -1082,7 +1098,11 @@ class FakeUpstreamsSqlDatabase implements SqlDatabase {
   }
 }
 
-const cloneFakeUpstreamRow = (row: FakeUpstreamRow): FakeUpstreamRow => ({ ...row });
+const cloneFakeUpstreamRow = (row: FakeUpstreamRow): FakeUpstreamRow => ({
+  model_filter_mode: 'blacklist',
+  enabled_public_model_ids: '[]',
+  ...row,
+});
 
 const compareFakeUpstreamRows = (a: FakeUpstreamRow, b: FakeUpstreamRow): number => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at);
 

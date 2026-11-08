@@ -12,7 +12,7 @@ import {
   validateAccessRecordInput,
 } from '../../src/access-control/types.ts';
 import { buildKeyToUserMap } from '../../src/control-plane/shared/key-to-user.ts';
-import { normalizeDisabledPublicModelIds } from '../../src/repo/disabled-public-models.ts';
+import { normalizeDisabledPublicModelIds, normalizeEnabledPublicModelIds, normalizeModelFilterMode } from '../../src/repo/disabled-public-models.ts';
 import { normalizeFlagOverrides } from '../../src/repo/flag-overrides.ts';
 import { groupNameKey } from '../../src/repo/group-names.ts';
 import { MODEL_CATALOG_REVISION, storedModelErrorMessage } from '../../src/repo/models-cache-contract.ts';
@@ -1163,7 +1163,9 @@ const cloneUpstreamRecord = (upstream: StoredUpstreamRecord): StoredUpstreamReco
   state: upstream.state === null || upstream.state === undefined ? null : structuredClone(upstream.state),
   modelsCache: structuredClone(upstream.modelsCache),
   flagOverrides: normalizeFlagOverrides(upstream.flagOverrides),
+  modelFilterMode: normalizeModelFilterMode(upstream.modelFilterMode),
   disabledPublicModelIds: normalizeDisabledPublicModelIds(upstream.disabledPublicModelIds),
+  enabledPublicModelIds: normalizeEnabledPublicModelIds(upstream.enabledPublicModelIds),
   proxyFallbackList: normalizeProxyFallbackList(upstream.proxyFallbackList),
   modelPrefix: structuredClone(upstream.modelPrefix),
   hue: upstream.hue,

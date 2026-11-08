@@ -286,7 +286,9 @@ test('disabledPublicModelIds hides models from the catalog and routing, per upst
     },
     state: null,
     flagOverrides: {},
+    modelFilterMode: 'blacklist' as const,
     disabledPublicModelIds: over.disabledPublicModelIds,
+    enabledPublicModelIds: [],
     proxyFallbackList: [],
     modelPrefix: null,
     modelsCache: null,
@@ -328,6 +330,54 @@ test('disabledPublicModelIds hides models from the catalog and routing, per upst
   // The untouched model still routes from up_a.
   const keep = await enumerateModelCandidates({ upstreamIds: null, randomizeUpstreams: false, model: 'gpt-keep', kind: 'chat', scheduler: testScheduler, runtimeLocation: 'TEST' });
   assertEquals(keep.candidates.map(m => m.provider.upstreamId), ['up_a']);
+});
+
+test('modelFilterMode=whitelist hides all models except enabledPublicModelIds from catalog and routing', async () => {
+  const { repo } = await setupAppTest();
+  await repo.upstreams.deleteAll();
+
+  const azureUpstream = (over: { id: string; models: { upstreamModelId: string }[]; enabledPublicModelIds: string[] }) => ({
+    id: over.id,
+    kind: 'azure' as const,
+    name: over.id,
+    enabled: true,
+    usageRefreshIntervalMinutes: 0,
+    sortOrder: 1,
+    createdAt: '2026-05-21T00:00:00.000Z',
+    updatedAt: '2026-05-21T00:00:00.000Z',
+    config: {
+      endpoint: 'https://example.openai.azure.com',
+      apiKey: 'az-key',
+      models: over.models.map(m => ({ ...m, endpoints: { openaiChatCompletions: {} } })),
+    },
+    state: null,
+    flagOverrides: {},
+    modelFilterMode: 'whitelist' as const,
+    disabledPublicModelIds: [],
+    enabledPublicModelIds: over.enabledPublicModelIds,
+    proxyFallbackList: [],
+    modelPrefix: null,
+    modelsCache: null,
+    hue: 210,
+  });
+
+  await saveUpstreamForTest(repo.upstreams, azureUpstream({
+    id: 'up_white',
+    models: [
+      { upstreamModelId: 'gpt-allowed' },
+      { upstreamModelId: 'gpt-forbidden' },
+    ],
+    enabledPublicModelIds: ['gpt-allowed'],
+  }));
+
+  await warmModelsForTest();
+  const catalog = getModelsFromProviders(await listModelProviders(null), scheduleRefresh).models;
+  assertEquals([...catalog.map(m => m.id)].sort(), ['gpt-allowed']);
+
+  assertEquals((await enumerateModelCandidates({ upstreamIds: null, randomizeUpstreams: false, model: 'gpt-forbidden', kind: 'chat', scheduler: testScheduler, runtimeLocation: 'TEST' })).candidates.length, 0);
+
+  const allowed = await enumerateModelCandidates({ upstreamIds: null, randomizeUpstreams: false, model: 'gpt-allowed', kind: 'chat', scheduler: testScheduler, runtimeLocation: 'TEST' });
+  assertEquals(allowed.candidates.map(m => m.provider.upstreamId), ['up_white']);
 });
 
 // Every upstream request must start before any sibling is released. This
@@ -637,7 +687,9 @@ describe('catalog listing under modelPrefix', () => {
       sortOrder: 1,
       config: { baseUrl: 'https://dual.example.com', authStyle: 'bearer', apiKey: 'sk-x', endpoints: { openaiChatCompletions: {} }, ingressHeadersRules: [] },
       modelPrefix: { prefix: 'or/', addressable: ['unprefixed', 'prefixed'], listed: ['unprefixed', 'prefixed'] },
+      modelFilterMode: 'blacklist',
       disabledPublicModelIds: ['gpt-4o'],
+      enabledPublicModelIds: [],
     }));
 
     await withMockedFetch(

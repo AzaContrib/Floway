@@ -27,7 +27,9 @@ const serializeBase = (upstream: UpstreamRecord) => ({
   updated_at: upstream.updatedAt,
   flag_overrides: { ...upstream.flagOverrides },
   flag_defaults: flagDefaultsForKind(upstream.kind),
+  model_filter_mode: upstream.modelFilterMode,
   disabled_public_model_ids: [...upstream.disabledPublicModelIds],
+  enabled_public_model_ids: [...upstream.enabledPublicModelIds],
   proxy_fallback_list: upstream.proxyFallbackList.map(entry => entry.colos === undefined
     ? { id: entry.id }
     : { id: entry.id, colos: [...entry.colos] }),
@@ -191,7 +193,9 @@ const blueprintBase = (kind: UpstreamProviderKind) => ({
   updated_at: '',
   flag_overrides: {} as FlagOverrides,
   flag_defaults: flagDefaultsForKind(kind),
+  model_filter_mode: 'blacklist' as const,
   disabled_public_model_ids: [] as string[],
+  enabled_public_model_ids: [] as string[],
   proxy_fallback_list: [] as ProxyFallbackEntry[],
   model_prefix: null,
 });

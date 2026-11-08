@@ -89,7 +89,7 @@ const makeCandidate = (overrides: {
   return {
     provider: {
       upstreamId: upstream, kind: 'custom', name: upstream, inboundHeaderAllowlist: [],
-      disabledPublicModelIds: [], modelPrefix: null, modelsCache: null, instance: provider,
+      modelFilterMode: 'blacklist', disabledPublicModelIds: [], enabledPublicModelIds: [], modelPrefix: null, modelsCache: null, instance: provider,
     },
     model: stubInternalModel(overrides.endpoints ? { endpoints: overrides.endpoints } : {}, upstream),
     fetcher: directFetcher,

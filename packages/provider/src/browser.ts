@@ -19,7 +19,7 @@ export { validateUpstreamPath, joinBaseAndPath } from './join.ts';
 
 export type * from './model.ts';
 
-export { ALL_PROVIDER_KINDS, assertUpstreamProviderKind, UPSTREAM_HUE_DEGREES, normalizeUpstreamHue } from './model.ts';
+export { ALL_PROVIDER_KINDS, assertUpstreamProviderKind, UPSTREAM_HUE_DEGREES, normalizeUpstreamHue, isModelAllowed } from './model.ts';
 
 export type * from './model-config.ts';
 

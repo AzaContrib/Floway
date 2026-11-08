@@ -1,4 +1,4 @@
-import { normalizeDisabledPublicModelIds } from './disabled-public-models.ts';
+import { normalizeDisabledPublicModelIds, normalizeEnabledPublicModelIds, normalizeModelFilterMode } from './disabled-public-models.ts';
 import { SqlExpirationSweepsRepo } from './expiration-sweeps-sql.ts';
 import { normalizeFlagOverrides } from './flag-overrides.ts';
 import { decodeAliasTargets, decodeAnnouncedMetadata, encodeAliasTargets, encodeAnnouncedMetadata } from './model-alias-codecs.ts';
@@ -66,6 +66,7 @@ import type {
 } from './types.ts';
 import {
   decodeDisabledPublicModelIds,
+  decodeEnabledPublicModelIds,
   decodeModelPrefix,
   decodeProxyFallbackList,
   decodeUpstreamConfig,
@@ -99,7 +100,7 @@ import { assertWebSearchProviderName, type WebSearchConfig } from '../shared/web
 import { AgentSetupTokenCollisionError } from '@floway-dev/agent-setup';
 import type { SqlBindValue, SqlDatabase, SqlPreparedStatement } from '@floway-dev/platform';
 import { addDecimalStrings, canonicalPricingSelectorKey, defaultUserPreferences, parseBillingMetric, parseModelKind, parseNonNegativeDecimalString, parsePricingSelectorKey, parseStoredUserPreferences, serializeUserPreferences, type AliasSelection, type AnnouncedMetadata, type UserPreferences } from '@floway-dev/protocols/common';
-import type { ProxyFallbackEntry, ModelPrefixConfig, UpstreamModelsCache, UpstreamRecord } from '@floway-dev/provider';
+import type { ModelFilterMode, ProxyFallbackEntry, ModelPrefixConfig, UpstreamModelsCache, UpstreamRecord } from '@floway-dev/provider';
 import { normalizeModelPrefix, parsePerformanceOperation, UpstreamGoneError } from '@floway-dev/provider';
 
 interface ApiKeyRow {
@@ -1308,7 +1309,7 @@ const MODELS_CACHE_EPOCH_SQL = `CASE
   ELSE 0
 END`;
 
-const UPSTREAM_COLUMNS = 'id, provider, name, enabled, usage_refresh_interval_minutes, sort_order, created_at, updated_at, config_version, config_json, state_json, models_cache_json, flag_overrides, disabled_public_model_ids, proxy_fallback_list_json, model_prefix_json, hue';
+const UPSTREAM_COLUMNS = 'id, provider, name, enabled, usage_refresh_interval_minutes, sort_order, created_at, updated_at, config_version, config_json, state_json, models_cache_json, flag_overrides, model_filter_mode, disabled_public_model_ids, enabled_public_model_ids, proxy_fallback_list_json, model_prefix_json, hue';
 
 class SqlUpstreamRepo implements UpstreamRepo {
   constructor(private db: SqlDatabase) {}
@@ -1358,8 +1359,8 @@ class SqlUpstreamRepo implements UpstreamRepo {
 
   async insertAtEndForModels(upstream: UpstreamRecord): Promise<StoredUpstreamRecord | null> {
     const row = await this.db
-      .prepare(`INSERT INTO upstreams (id, provider, name, enabled, usage_refresh_interval_minutes, sort_order, created_at, updated_at, config_version, config_json, state_json, flag_overrides, disabled_public_model_ids, proxy_fallback_list_json, model_prefix_json, hue)
-        VALUES (?, ?, ?, ?, ?, (SELECT coalesce(max(sort_order), -1) + 1 FROM upstreams), ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
+      .prepare(`INSERT INTO upstreams (id, provider, name, enabled, usage_refresh_interval_minutes, sort_order, created_at, updated_at, config_version, config_json, state_json, flag_overrides, model_filter_mode, disabled_public_model_ids, enabled_public_model_ids, proxy_fallback_list_json, model_prefix_json, hue)
+        VALUES (?, ?, ?, ?, ?, (SELECT coalesce(max(sort_order), -1) + 1 FROM upstreams), ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (id) DO NOTHING RETURNING ${UPSTREAM_COLUMNS}`)
       .bind(
         upstream.id,
@@ -1372,7 +1373,9 @@ class SqlUpstreamRepo implements UpstreamRepo {
         serializeStoredConfig(upstream.config),
         serializeStoredState(upstream.state),
         JSON.stringify(normalizeFlagOverrides(upstream.flagOverrides)),
+        normalizeModelFilterMode(upstream.modelFilterMode),
         JSON.stringify(normalizeDisabledPublicModelIds(upstream.disabledPublicModelIds)),
+        JSON.stringify(normalizeEnabledPublicModelIds(upstream.enabledPublicModelIds)),
         JSON.stringify(normalizeProxyFallbackList(upstream.proxyFallbackList)),
         upstream.modelPrefix === null ? null : JSON.stringify(upstream.modelPrefix),
         upstream.hue,
@@ -1383,7 +1386,7 @@ class SqlUpstreamRepo implements UpstreamRepo {
 
   async insertForModels(upstream: UpstreamRecord): Promise<StoredUpstreamRecord | null> {
     const row = await this.db
-      .prepare(`INSERT INTO upstreams (id, provider, name, enabled, usage_refresh_interval_minutes, sort_order, created_at, updated_at, config_version, config_json, state_json, flag_overrides, disabled_public_model_ids, proxy_fallback_list_json, model_prefix_json, hue) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING
+      .prepare(`INSERT INTO upstreams (id, provider, name, enabled, usage_refresh_interval_minutes, sort_order, created_at, updated_at, config_version, config_json, state_json, flag_overrides, model_filter_mode, disabled_public_model_ids, enabled_public_model_ids, proxy_fallback_list_json, model_prefix_json, hue) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING
         RETURNING ${UPSTREAM_COLUMNS}`)
       .bind(
         upstream.id,
@@ -1397,7 +1400,9 @@ class SqlUpstreamRepo implements UpstreamRepo {
         serializeStoredConfig(upstream.config),
         serializeStoredState(upstream.state),
         JSON.stringify(normalizeFlagOverrides(upstream.flagOverrides)),
+        normalizeModelFilterMode(upstream.modelFilterMode),
         JSON.stringify(normalizeDisabledPublicModelIds(upstream.disabledPublicModelIds)),
+        JSON.stringify(normalizeEnabledPublicModelIds(upstream.enabledPublicModelIds)),
         JSON.stringify(normalizeProxyFallbackList(upstream.proxyFallbackList)),
         upstream.modelPrefix === null ? null : JSON.stringify(upstream.modelPrefix),
         upstream.hue,
@@ -1449,7 +1454,9 @@ class SqlUpstreamRepo implements UpstreamRepo {
            config_json = ?,
            state_json = CASE WHEN ? THEN ? ELSE state_json END,
            flag_overrides = ?,
+           model_filter_mode = ?,
            disabled_public_model_ids = ?,
+           enabled_public_model_ids = ?,
            proxy_fallback_list_json = ?,
            model_prefix_json = ?,
            hue = ?${modelsCacheUpdate}
@@ -1464,7 +1471,9 @@ class SqlUpstreamRepo implements UpstreamRepo {
            AND config_json = ?
            AND (? = 0 OR state_json IS ?)
            AND flag_overrides = ?
+           AND model_filter_mode = ?
            AND disabled_public_model_ids = ?
+           AND enabled_public_model_ids = ?
            AND proxy_fallback_list_json = ?
            AND model_prefix_json IS ?
            AND hue = ?
@@ -1482,7 +1491,9 @@ class SqlUpstreamRepo implements UpstreamRepo {
         sqliteBoolean(replaceState),
         serializeStoredState(upstream.state),
         JSON.stringify(normalizeFlagOverrides(upstream.flagOverrides)),
+        normalizeModelFilterMode(upstream.modelFilterMode),
         JSON.stringify(normalizeDisabledPublicModelIds(upstream.disabledPublicModelIds)),
+        JSON.stringify(normalizeEnabledPublicModelIds(upstream.enabledPublicModelIds)),
         JSON.stringify(normalizeProxyFallbackList(upstream.proxyFallbackList)),
         upstream.modelPrefix === null ? null : JSON.stringify(upstream.modelPrefix),
         upstream.hue,
@@ -1498,7 +1509,9 @@ class SqlUpstreamRepo implements UpstreamRepo {
         sqliteBoolean(replaceState),
         storedRow.state_json,
         storedRow.flag_overrides,
+        storedRow.model_filter_mode,
         storedRow.disabled_public_model_ids,
+        storedRow.enabled_public_model_ids,
         storedRow.proxy_fallback_list_json,
         storedRow.model_prefix_json,
         previous.hue,
@@ -1624,7 +1637,9 @@ interface UpstreamRow {
   state_json: string | null;
   models_cache_json: string | null;
   flag_overrides: string;
+  model_filter_mode: string;
   disabled_public_model_ids: string;
+  enabled_public_model_ids: string;
   proxy_fallback_list_json: string;
   model_prefix_json: string | null;
   hue: number;
@@ -1651,7 +1666,9 @@ const toUpstreamRecord = (row: UpstreamRow): StoredUpstreamRecord => {
     config,
     state,
     flagOverrides: parseFlagOverrides(row.id, row.flag_overrides),
+    modelFilterMode: parseModelFilterMode(row.id, row.model_filter_mode),
     disabledPublicModelIds: parseDisabledPublicModelIds(row.id, row.disabled_public_model_ids),
+    enabledPublicModelIds: parseEnabledPublicModelIds(row.id, row.enabled_public_model_ids),
     proxyFallbackList: parseProxyFallbackList(row.id, row.proxy_fallback_list_json),
     modelPrefix: parseModelPrefix(row.id, row.model_prefix_json),
     hue: parseUpstreamHue(row.id, row.hue),
@@ -1669,8 +1686,20 @@ const parseFlagOverrides = (id: string, json: string): Record<string, boolean> =
   return normalizeFlagOverrides(decodeUpstreamFlagOverrides(json, id));
 };
 
+const parseModelFilterMode = (id: string, mode: string | null | undefined): ModelFilterMode => {
+  try {
+    return normalizeModelFilterMode(mode);
+  } catch (cause) {
+    throw new Error(`Invalid upstream model_filter_mode for ${id}`, { cause });
+  }
+};
+
 const parseDisabledPublicModelIds = (id: string, json: string): string[] => {
   return normalizeDisabledPublicModelIds(decodeDisabledPublicModelIds(json, id));
+};
+
+const parseEnabledPublicModelIds = (id: string, json: string): string[] => {
+  return normalizeEnabledPublicModelIds(decodeEnabledPublicModelIds(json, id));
 };
 
 const parseProxyFallbackList = (id: string, json: string): ProxyFallbackEntry[] => {

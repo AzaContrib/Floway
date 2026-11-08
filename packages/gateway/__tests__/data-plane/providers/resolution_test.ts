@@ -176,7 +176,9 @@ test('enumerateRealModelCandidates rejects a model id disabled on that upstream 
       ],
     },
     flagOverrides: {},
+    modelFilterMode: 'blacklist',
     disabledPublicModelIds: ['disabled-model'],
+    enabledPublicModelIds: [],
     proxyFallbackList: [],
     modelPrefix: null,
     modelsCache: null,
@@ -190,6 +192,45 @@ test('enumerateRealModelCandidates rejects a model id disabled on that upstream 
   const disabled = await enumerateRealModelCandidates('disabled-model', 'chat', providers, { fetcherForUpstream: () => directFetcher, randomizeUpstreams: false, scheduleRefresh });
   assertEquals(enabled.candidates[0]?.model.id, 'enabled-model');
   assertEquals(disabled.candidates.length, 0);
+});
+
+test('enumerateRealModelCandidates filters models using whitelist mode', async () => {
+  const { repo } = await setupAppTest();
+  await repo.upstreams.deleteAll();
+  await repo.upstreams.insertForModels({
+    id: 'up_azure_whitelist',
+    kind: 'azure',
+    name: 'Azure Whitelist',
+    enabled: true,
+    usageRefreshIntervalMinutes: 0,
+    sortOrder: 0,
+    createdAt: '2026-05-21T00:00:00.000Z',
+    updatedAt: '2026-05-21T00:00:00.000Z',
+    config: {
+      endpoint: 'https://example.openai.azure.com',
+      apiKey: 'az-key',
+      models: [
+        { upstreamModelId: 'whitelisted-model', endpoints: { openaiChatCompletions: {} } },
+        { upstreamModelId: 'unlisted-model', endpoints: { openaiChatCompletions: {} } },
+      ],
+    },
+    flagOverrides: {},
+    modelFilterMode: 'whitelist',
+    disabledPublicModelIds: [],
+    enabledPublicModelIds: ['whitelisted-model'],
+    proxyFallbackList: [],
+    modelPrefix: null,
+    modelsCache: null,
+    hue: 210,
+    state: null,
+  });
+
+  await warmModelsForTest();
+  const providers = await listModelProviders(null);
+  const allowed = await enumerateRealModelCandidates('whitelisted-model', 'chat', providers, { fetcherForUpstream: () => directFetcher, randomizeUpstreams: false, scheduleRefresh });
+  const disallowed = await enumerateRealModelCandidates('unlisted-model', 'chat', providers, { fetcherForUpstream: () => directFetcher, randomizeUpstreams: false, scheduleRefresh });
+  assertEquals(allowed.candidates[0]?.model.id, 'whitelisted-model');
+  assertEquals(disallowed.candidates.length, 0);
 });
 
 test('randomizes upstream candidate groups without splitting or reordering a group', async () => {

@@ -284,7 +284,9 @@ test('Upstream.Edit.Models returns a redacted record and only accepts model fiel
   assertEquals(allowed.status, 200);
   const stored = await repo.upstreams.getById('up_restricted');
   expect(stored).toMatchObject({
+    modelFilterMode: 'blacklist',
     disabledPublicModelIds: ['old-model'],
+    enabledPublicModelIds: [],
     modelPrefix: null,
     config: {
       baseUrl: 'https://secret.example.com',

@@ -301,7 +301,9 @@ export const createCustomProvider = (record: UpstreamRecord): Provider => {
     // client. A rule with a configured value supplies its own value inside
     // this provider, so the client's copy is neither needed nor forwarded.
     inboundHeaderAllowlist: config.ingressHeadersRules.flatMap(rule => rule.value === null ? [rule.key] : []),
+    modelFilterMode: record.modelFilterMode,
     disabledPublicModelIds: record.disabledPublicModelIds,
+    enabledPublicModelIds: record.enabledPublicModelIds,
     modelPrefix: record.modelPrefix,
     modelsCache: record.modelsCache,
     instance,

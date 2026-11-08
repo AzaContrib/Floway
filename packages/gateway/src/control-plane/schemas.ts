@@ -18,7 +18,7 @@
 import { z } from 'zod';
 
 import { accessPrincipalSchema, accessRecordInputSchema, accessTargetScopeSchema } from '../access-control/schemas.ts';
-import { normalizeDisabledPublicModelIds } from '../repo/disabled-public-models.ts';
+import { normalizeDisabledPublicModelIds, normalizeEnabledPublicModelIds, normalizeModelFilterMode } from '../repo/disabled-public-models.ts';
 import { CUSTOM_API_KEY_MAX_LENGTH, KEY_SOURCES } from '../shared/api-key-tokens.ts';
 import { RETENTION_MAX_SECONDS, SECONDS_PER_DAY } from '../shared/retention.ts';
 import { isTelemetryBucketGranularity, kindForEndpoints, MODEL_KINDS, parseNonNegativeDecimalString, QUOTA_DISPLAYS, RERANK_PROTOCOLS, SUPPORTED_LANGUAGES, tokenUsageUnattributedUserId, type TelemetryBucketGranularity } from '@floway-dev/protocols/common';
@@ -42,7 +42,9 @@ const flagOverridesSchema = z.unknown().transform((value, ctx): FlagOverrides =>
 // create/update response echoes exactly what gets persisted (trimmed, de-duped).
 // There is no id allowlist to enforce — any string is a legal public model id —
 // so this only trims and de-dupes rather than rejecting unknown ids.
+const modelFilterModeSchema = z.enum(['blacklist', 'whitelist']).transform(normalizeModelFilterMode);
 const disabledPublicModelIdsSchema = z.array(z.string()).transform(normalizeDisabledPublicModelIds);
+const enabledPublicModelIdsSchema = z.array(z.string()).transform(normalizeEnabledPublicModelIds);
 
 // The structured endpoint capability map, shared by per-model config and the
 // custom upstream-level fallback. A present key declares the endpoint is served.
@@ -391,7 +393,9 @@ const upstreamBaseFields = {
   usage_refresh_interval_minutes: z.number().int().nonnegative().optional(),
   sort_order: z.never({ error: 'New upstreams always append after the current order.' }).optional(),
   flag_overrides: flagOverridesSchema.optional(),
+  model_filter_mode: modelFilterModeSchema.optional(),
   disabled_public_model_ids: disabledPublicModelIdsSchema.optional(),
+  enabled_public_model_ids: enabledPublicModelIdsSchema.optional(),
   proxy_fallback_list: proxyFallbackListSchema.optional(),
   model_prefix: modelPrefixSchema.optional(),
   hue: upstreamHueSchema,
@@ -429,7 +433,9 @@ export const updateUpstreamBody = z.object({
   usage_refresh_interval_minutes: z.number().int().nonnegative().optional(),
   sort_order: z.never({ error: 'Use the upstream reorder endpoint to change sort_order.' }).optional(),
   flag_overrides: flagOverridesSchema.optional(),
+  model_filter_mode: modelFilterModeSchema.optional(),
   disabled_public_model_ids: disabledPublicModelIdsSchema.optional(),
+  enabled_public_model_ids: enabledPublicModelIdsSchema.optional(),
   proxy_fallback_list: proxyFallbackListSchema.optional(),
   model_prefix: modelPrefixSchema.optional(),
   hue: upstreamHueSchema.optional(),
@@ -577,7 +583,9 @@ export const previewModelsBody = z.object({
     updated_at: z.string().optional(),
     hue: upstreamHueSchema.optional(),
     flag_overrides: flagOverridesSchema.optional(),
+    model_filter_mode: modelFilterModeSchema.optional(),
     disabled_public_model_ids: disabledPublicModelIdsSchema.optional(),
+    enabled_public_model_ids: enabledPublicModelIdsSchema.optional(),
     model_prefix: modelPrefixSchema.optional(),
   }),
 });

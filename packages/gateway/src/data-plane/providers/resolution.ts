@@ -10,7 +10,7 @@ import { getRepo } from '../../repo/index.ts';
 import type { ModelAliasRecord, User } from '../../repo/types.ts';
 import type { BackgroundScheduler } from '@floway-dev/platform';
 import type { ModelKind } from '@floway-dev/protocols/common';
-import type { Fetcher, ModelCandidate } from '@floway-dev/provider';
+import { isModelAllowed, type Fetcher, type ModelCandidate } from '@floway-dev/provider';
 
 // Resolve one inbound id against one upstream. The upstream's
 // `modelPrefix.addressable` configuration decides which lookup branches
@@ -49,11 +49,15 @@ const enumerateOneUpstreamCandidates = (
   if (lookupIds.length === 0) return { candidates: [], sawModel: false, modelsError: false };
 
   const snapshot = readUpstreamModelsSnapshotAndScheduleRefresh(provider, scheduleRefresh);
-  const disabled = new Set(provider.disabledPublicModelIds);
+  const filter = {
+    modelFilterMode: provider.modelFilterMode,
+    disabledPublicModelIds: new Set(provider.disabledPublicModelIds),
+    enabledPublicModelIds: new Set(provider.enabledPublicModelIds),
+  };
   const candidates: ModelCandidate[] = [];
   let sawModel = false;
   for (const lookupId of lookupIds) {
-    const match = snapshot.models.find(m => m.id === lookupId && !disabled.has(m.id));
+    const match = snapshot.models.find(m => m.id === lookupId && isModelAllowed(filter, m.id));
     if (!match) continue;
     sawModel = true;
     if (match.kind === kind) {

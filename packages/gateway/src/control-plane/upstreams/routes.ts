@@ -355,7 +355,9 @@ export const createUpstream = async (c: CtxWithJson<typeof createUpstreamBody>) 
     createdAt: now,
     updatedAt: now,
     flagOverrides: body.flag_overrides ?? {},
+    modelFilterMode: body.model_filter_mode ?? 'blacklist',
     disabledPublicModelIds: body.disabled_public_model_ids ?? [],
+    enabledPublicModelIds: body.enabled_public_model_ids ?? [],
     proxyFallbackList,
     modelPrefix,
     hue: body.hue,
@@ -400,7 +402,7 @@ export const updateUpstream = async (c: CtxWithJson<typeof updateUpstreamBody, '
 
   const body = c.req.valid('json');
   if (editLevel === 'models') {
-    const allowedTopLevel = new Set(['disabled_public_model_ids', 'config']);
+    const allowedTopLevel = new Set(['model_filter_mode', 'disabled_public_model_ids', 'enabled_public_model_ids', 'config']);
     const blockedTopLevel = Object.keys(body).filter(key => !allowedTopLevel.has(key));
     if (blockedTopLevel.length > 0) {
       return c.json({ error: `Upstream.Edit.Models cannot change: ${blockedTopLevel.join(', ')}` }, 403);
@@ -457,7 +459,9 @@ export const updateUpstream = async (c: CtxWithJson<typeof updateUpstreamBody, '
   if (body.enabled !== undefined) next = { ...next, enabled: body.enabled };
   if (body.usage_refresh_interval_minutes !== undefined) next = { ...next, usageRefreshIntervalMinutes: body.usage_refresh_interval_minutes };
   if (body.flag_overrides !== undefined) next = { ...next, flagOverrides: body.flag_overrides };
+  if (body.model_filter_mode !== undefined) next = { ...next, modelFilterMode: body.model_filter_mode };
   if (body.disabled_public_model_ids !== undefined) next = { ...next, disabledPublicModelIds: body.disabled_public_model_ids };
+  if (body.enabled_public_model_ids !== undefined) next = { ...next, enabledPublicModelIds: body.enabled_public_model_ids };
   if (body.proxy_fallback_list !== undefined) {
     const normalized = normalizeProxyFallbackList(body.proxy_fallback_list);
     const fallbackCheck = validateProxyFallbackList(normalized, knownProxyIds);

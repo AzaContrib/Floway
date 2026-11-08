@@ -601,6 +601,12 @@ const en = {
         unsaved: 'Unsaved changes',
         pathOverridesHint:
             'Leave an entry blank to use its default /v1 path.',
+        modelFilterModeHint:
+            'Choose whether models are allowed by default (blacklist) or blocked by default (whitelist).',
+        modelFilterMode: {
+          blacklist: 'Blacklist',
+          whitelist: 'Whitelist',
+        },
         disabledModelsHint:
             'Disabled models stay hidden from the catalog and routing while their metadata remains editable.',
         disabledModelsPlaceholder: 'Search models…',
@@ -608,6 +614,13 @@ const en = {
         disabledModelsSelected_other: '{{count, number}} models disabled',
         disabledModelsUnavailable: 'Missing',
         disabledModelsMissing: 'No longer in the current model catalog: {{models}}',
+        enabledModelsHint:
+            'Only enabled models are visible in the catalog and routable through this upstream.',
+        enabledModelsPlaceholder: 'Search models…',
+        enabledModelsSelected_one: '{{count, number}} model enabled',
+        enabledModelsSelected_other: '{{count, number}} models enabled',
+        enabledModelsUnavailable: 'Missing',
+        enabledModelsMissing: 'No longer in the current model catalog: {{models}}',
         prefixInvalid:
             'The prefix must end in /, use only letters, numbers, dots, underscores, hyphens, or slashes, and contain at most {{max, number}} characters.',
         prefixDescription:
@@ -626,7 +639,9 @@ const en = {
           proxy: 'Proxy routing',
           apiPaths: 'API paths',
           prefix: 'Model name prefix',
+          modelFilterMode: 'Model filter mode',
           disabledModels: 'Disabled models',
+          enabledModels: 'Enabled models',
         },
         hue: {
           description: 'Choose how this upstream is distinguished across the console.',
@@ -805,6 +820,7 @@ const en = {
           },
         },
         models: {
+          whitelistNotice: 'Whitelist mode is active for this upstream: all models are disabled by default. Toggle a model on to enable it.',
           details: 'Model details',
           sections: 'Model sections',
           editAsYaml: 'Edit as YAML',

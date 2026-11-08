@@ -573,12 +573,24 @@ const zhHansCN = {
         optional: '可选',
         unsaved: '有未保存更改',
         pathOverridesHint: '留空时使用对应的默认 /v1 路径。',
+        modelFilterModeHint:
+            '选择模型默认启用（黑名单）还是默认禁用（白名单）。',
+        modelFilterMode: {
+          blacklist: '黑名单',
+          whitelist: '白名单',
+        },
         disabledModelsHint:
             '禁用后的模型不会出现在目录中，也不会参与路由；其元数据仍可编辑。',
         disabledModelsPlaceholder: '搜索模型…',
         disabledModelsSelected_other: '已禁用 {{count, number}} 个模型',
         disabledModelsUnavailable: '已不存在',
         disabledModelsMissing: '已不在当前模型目录中：{{models}}',
+        enabledModelsHint:
+            '仅启用的模型会出现在目录中并参与路由；其余模型默认禁用。',
+        enabledModelsPlaceholder: '搜索模型…',
+        enabledModelsSelected_other: '已启用 {{count, number}} 个模型',
+        enabledModelsUnavailable: '已不存在',
+        enabledModelsMissing: '已不在当前模型目录中：{{models}}',
         prefixInvalid:
             '前缀必须以 / 结尾，只能包含字母、数字、点、下划线、连字符或斜杠，且不超过 {{max, number}} 个字符。',
         prefixDescription: '作为字面前缀匹配传入的模型 ID，必须以 / 结尾。',
@@ -596,7 +608,9 @@ const zhHansCN = {
           proxy: '代理路由',
           apiPaths: 'API 路径',
           prefix: '模型名称前缀',
+          modelFilterMode: '模型过滤模式',
           disabledModels: '禁用的模型',
+          enabledModels: '启用的模型',
         },
         hue: {
           description: '选择在控制台中区分此上游的颜色。',
@@ -774,6 +788,7 @@ const zhHansCN = {
           },
         },
         models: {
+          whitelistNotice: '此上游已开启白名单模式：默认禁用所有模型。开启开关即可启用对应模型。',
           details: '模型详情',
           sections: '模型分区',
           editAsYaml: '编辑 YAML',

@@ -4,7 +4,7 @@ import { accessRecordInputSchema } from '../../access-control/schemas.ts';
 import type { AccessRecordInput } from '../../access-control/types.ts';
 import { parseWebSearchConfigStrict } from '../../data-plane/tools/web-search/config.ts';
 import type { WebSearchConfig } from '../../data-plane/tools/web-search/types.ts';
-import { parseDisabledPublicModelIdsWire } from '../../repo/disabled-public-models.ts';
+import { normalizeModelFilterMode, parseDisabledPublicModelIdsWire, parseEnabledPublicModelIdsWire } from '../../repo/disabled-public-models.ts';
 import { isOpenAIResponsesRetentionSeconds, OPENAI_RESPONSES_RETENTION_MAX_SECONDS, OPENAI_RESPONSES_RETENTION_MIN_SECONDS } from '../../repo/openai-responses-retention.ts';
 import { isDirectFallbackId, normalizeProxyFallbackList } from '../../repo/proxy-fallback-list.ts';
 import { SEED_ADMIN_USER_ID } from '../../repo/seed-admin.ts';
@@ -168,7 +168,9 @@ const upstreamWireSchema = parsedBy((value): UpstreamRecord => {
     createdAt: parseValue(nonEmptyStringSchema('created_at'), wire.created_at),
     updatedAt: parseValue(nonEmptyStringSchema('updated_at'), wire.updated_at),
     flagOverrides: parseValue(parsedBy(parseFlagOverridesWire), wire.flag_overrides),
+    modelFilterMode: parseValue(parsedBy(normalizeModelFilterMode).optional().default('blacklist'), wire.model_filter_mode),
     disabledPublicModelIds: parseValue(parsedBy(parseDisabledPublicModelIdsWire).optional().default([]), wire.disabled_public_model_ids),
+    enabledPublicModelIds: parseValue(parsedBy(parseEnabledPublicModelIdsWire).optional().default([]), wire.enabled_public_model_ids),
     proxyFallbackList: parseValue(proxyFallbackListSchema, wire.proxy_fallback_list),
     modelPrefix: parseValue(parsedBy(normalizeModelPrefix).optional().default(null), wire.model_prefix),
     hue: parseValue(parsedBy(normalizeUpstreamHue), wire.hue),

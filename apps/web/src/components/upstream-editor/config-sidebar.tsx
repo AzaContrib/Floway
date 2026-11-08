@@ -18,9 +18,9 @@ import { ScrollArea } from '../ui/scroll-area';
 import { StatusBadge } from '../ui/status-badge';
 import { TooltipIconButton } from '../ui/tooltip-icon-button';
 import { HuePicker } from '../upstreams/hue-picker';
-import { type UpstreamModelConfig, MODEL_PREFIX_MAX_LENGTH } from '@floway-dev/provider/browser';
+import { type ModelFilterMode, type UpstreamModelConfig, MODEL_PREFIX_MAX_LENGTH } from '@floway-dev/provider/browser';
 
-const { Button, Checkbox, Field, MessageBar, MessageBarBody, Option, Text } = fluentComponents;
+const { Button, Checkbox, Field, MessageBar, MessageBarBody, Option, Radio, RadioGroup, Text } = fluentComponents;
 
 const COMMON_COLO_LOCATIONS = [
   'HKG', 'NRT', 'KIX', 'TPE', 'ICN', 'SIN', 'BKK', 'KUL',
@@ -54,12 +54,13 @@ export function UpstreamConfigSidebar({
   runtime: RuntimeInfo;
 }) {
   const { t } = useTranslation();
-  const { control, formState: { errors } } = useFormContext<UpstreamEditorValues>();
+  const { control, setValue, formState: { errors } } = useFormContext<UpstreamEditorValues>();
   // Only a Full editor may change connection, metadata, proxies and flags.
   // Models-level and audit-only editors both read them; the difference between
   // the two lives in the model workspace, not in this sidebar.
   const readOnly = configReadOnly(editLevel);
   const immutable = readOnly.connection;
+  const modelFilterMode = useWatch({ control, name: 'modelFilterMode' });
   const [config, state] = useWatch({ control, name: ['config', 'state'] });
   const usageRefreshDisabled = record.kind === 'claude-code'
     ? !(state as Extract<UpstreamRecord, { kind: 'claude-code' }>['state']).accounts.some(account => account.tokenKind === 'oauth')
@@ -152,9 +153,29 @@ export function UpstreamConfigSidebar({
         >
           <ModelPrefixEditor readOnly={immutable} />
         </EditorSection>
-        <EditorSection title={t('dashboard.upstreamEditor.sections.disabledModels')} description={t('dashboard.upstreamEditor.disabledModelsHint')}>
-          <DisabledModelsCombobox catalogAvailable={catalogAvailable} discovered={discovered} readOnly={immutable} />
+        <EditorSection
+          title={t('dashboard.upstreamEditor.sections.modelFilterMode')}
+          description={t('dashboard.upstreamEditor.modelFilterModeHint')}
+        >
+          <RadioGroup
+            disabled={immutable}
+            layout="horizontal"
+            value={modelFilterMode}
+            onChange={(_, data) => setValue('modelFilterMode', data.value as ModelFilterMode, { shouldDirty: true })}
+          >
+            <Radio value="blacklist" label={t('dashboard.upstreamEditor.modelFilterMode.blacklist')} />
+            <Radio value="whitelist" label={t('dashboard.upstreamEditor.modelFilterMode.whitelist')} />
+          </RadioGroup>
         </EditorSection>
+        {modelFilterMode === 'whitelist' ? (
+          <EditorSection title={t('dashboard.upstreamEditor.sections.enabledModels')} description={t('dashboard.upstreamEditor.enabledModelsHint')}>
+            <EnabledModelsCombobox catalogAvailable={catalogAvailable} discovered={discovered} readOnly={immutable} />
+          </EditorSection>
+        ) : (
+          <EditorSection title={t('dashboard.upstreamEditor.sections.disabledModels')} description={t('dashboard.upstreamEditor.disabledModelsHint')}>
+            <DisabledModelsCombobox catalogAvailable={catalogAvailable} discovered={discovered} readOnly={immutable} />
+          </EditorSection>
+        )}
       </aside>
     </div>
   </ScrollArea>;
@@ -167,21 +188,24 @@ function UpstreamHueEditor({ kind, readOnly }: { kind: UpstreamRecord['kind']; r
   )} />;
 }
 
-// The sorted union of every model id this upstream can disable, which
+// The sorted union of every model id this upstream can filter, which
 // `__tests__/components/upstream-editor/disabled-models_test.ts` drives
 // directly -- the export is that seam, not a second consumer.
-export const buildDisabledModelOptions = (
+export const buildModelFilterOptions = (
   discovered: readonly UpstreamModelConfig[],
   manual: readonly UpstreamModelConfig[],
-  disabled: readonly string[],
+  selected: readonly string[],
   catalogAvailable: boolean,
 ) => {
   const availableIds = new Set([...discovered, ...manual].map(publicModelId).filter(Boolean));
-  const missingIds = catalogAvailable ? new Set(disabled.filter(id => !availableIds.has(id))) : new Set<string>();
-  return [...new Set([...availableIds, ...disabled])]
+  const missingIds = catalogAvailable ? new Set(selected.filter(id => !availableIds.has(id))) : new Set<string>();
+  return [...new Set([...availableIds, ...selected])]
     .toSorted((left, right) => left.localeCompare(right))
     .map(id => ({ id, missing: missingIds.has(id) }));
 };
+
+export const buildDisabledModelOptions = buildModelFilterOptions;
+export const buildEnabledModelOptions = buildModelFilterOptions;
 
 function DisabledModelsCombobox({ catalogAvailable, discovered, readOnly }: { catalogAvailable: boolean; discovered: UpstreamModelConfig[]; readOnly: boolean }) {
   const { t } = useTranslation();
@@ -210,6 +234,37 @@ function DisabledModelsCombobox({ catalogAvailable, discovered, readOnly }: { ca
     />
     {missing.length > 0 && <MessageBar intent="warning" layout="multiline">
       <MessageBarBody>{t('dashboard.upstreamEditor.disabledModelsMissing', { models: missing.join(', ') })}</MessageBarBody>
+    </MessageBar>}
+  </div>;
+}
+
+function EnabledModelsCombobox({ catalogAvailable, discovered, readOnly }: { catalogAvailable: boolean; discovered: UpstreamModelConfig[]; readOnly: boolean }) {
+  const { t } = useTranslation();
+  const { control, setValue } = useFormContext<UpstreamEditorValues>();
+  const enabled = useWatch({ control, name: 'enabledPublicModelIds' });
+  const manual = useWatch({ control, name: 'manualModels' });
+  const options = useMemo(
+    () => buildEnabledModelOptions(discovered, manual, enabled, catalogAvailable),
+    [catalogAvailable, enabled, discovered, manual],
+  );
+  const missing = options.filter(option => option.missing).map(option => option.id);
+  return <div className="grid gap-3">
+    <MultiselectCombobox
+      ariaLabel={t('dashboard.upstreamEditor.sections.enabledModels')}
+      onChange={next => setValue('enabledPublicModelIds', next, { shouldDirty: true })}
+      options={valuesAsOptions(options.map(option => option.id))}
+      readOnly={readOnly}
+      placeholder={enabled.length === 0
+        ? t('dashboard.upstreamEditor.enabledModelsPlaceholder')
+        : t('dashboard.upstreamEditor.enabledModelsSelected', { count: enabled.length })}
+      renderOption={({ value }) => <span className="flex items-center justify-between gap-3 min-w-0 w-full">
+        <span className="font-mono min-w-0 truncate">{value}</span>
+        {missing.includes(value) && <StatusBadge tone="warning">{t('dashboard.upstreamEditor.enabledModelsUnavailable')}</StatusBadge>}
+      </span>}
+      value={enabled}
+    />
+    {missing.length > 0 && <MessageBar intent="warning" layout="multiline">
+      <MessageBarBody>{t('dashboard.upstreamEditor.enabledModelsMissing', { models: missing.join(', ') })}</MessageBarBody>
     </MessageBar>}
   </div>;
 }

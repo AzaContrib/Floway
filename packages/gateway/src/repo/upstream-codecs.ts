@@ -172,6 +172,9 @@ export const decodeUpstreamFlagOverrides = (raw: string, id: string): Record<str
 export const decodeDisabledPublicModelIds = (raw: string, id: string): string[] =>
   decodeUpstreamJson(raw, disabledPublicModelIdsSchema, 'disabled_public_model_ids JSON', id);
 
+export const decodeEnabledPublicModelIds = (raw: string, id: string): string[] =>
+  decodeUpstreamJson(raw, disabledPublicModelIdsSchema, 'enabled_public_model_ids JSON', id);
+
 export const decodeProxyFallbackList = (raw: string, id: string): ProxyFallbackEntry[] =>
   decodeUpstreamJson(raw, proxyFallbackListSchema, 'proxy_fallback_list_json', id);
 

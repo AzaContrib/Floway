@@ -16,7 +16,7 @@ const NOW = Date.parse('2026-10-11T12:00:00Z');
 const access = { token: 'access', expiresAt: NOW + 86_400_000, refreshedAt: new Date(NOW).toISOString() };
 const base = (id: string, kind: UpstreamRecord['kind'], config: unknown, state: unknown): UpstreamRecord => ({
   id, kind, config, state, name: id, enabled: true, usageRefreshIntervalMinutes: 5,
-  sortOrder: 0, createdAt: '', updatedAt: '', flagOverrides: {}, disabledPublicModelIds: [],
+  sortOrder: 0, createdAt: '', updatedAt: '', flagOverrides: {}, modelFilterMode: 'blacklist', disabledPublicModelIds: [], enabledPublicModelIds: [],
   proxyFallbackList: [{ id: 'direct_fetch' }], modelPrefix: null, modelsCache: null, hue: 210,
 });
 const copilot = (id = 'copilot') => base(id, 'copilot', {

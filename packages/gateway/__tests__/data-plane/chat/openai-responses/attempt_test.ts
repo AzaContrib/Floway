@@ -67,7 +67,9 @@ const makeCandidate = (
       kind: 'custom',
       name: upstream,
       inboundHeaderAllowlist: [],
+      modelFilterMode: 'blacklist',
       disabledPublicModelIds: [],
+      enabledPublicModelIds: [],
       modelPrefix: null,
       modelsCache: null,
       instance: provider,
@@ -311,7 +313,9 @@ test('generate defers the role rewrite until after translation to OpenAI Chat Co
       kind: 'custom',
       name: upstream,
       inboundHeaderAllowlist: [],
+      modelFilterMode: 'blacklist',
       disabledPublicModelIds: [],
+      enabledPublicModelIds: [],
       modelPrefix: null,
       modelsCache: null,
       instance: stubProvider({ callOpenAIChatCompletions }),
@@ -465,7 +469,7 @@ test('generate strips disallowed headers and injects external image loading acro
   const candidate: ModelCandidate = {
     provider: {
       upstreamId: 'up_test', kind: 'custom', name: 'up_test', inboundHeaderAllowlist: [],
-      disabledPublicModelIds: [], modelPrefix: null, modelsCache: null, instance: anthropicMessagesProvider,
+      modelFilterMode: 'blacklist', disabledPublicModelIds: [], enabledPublicModelIds: [], modelPrefix: null, modelsCache: null, instance: anthropicMessagesProvider,
     },
     model: upstreamModel,
     fetcher: directFetcher,
@@ -503,7 +507,7 @@ test('generate preserves order and downgrades a disallowed system turn across tr
   const candidate: ModelCandidate = {
     provider: {
       upstreamId: 'up_test', kind: 'claude-code', name: 'up_test', inboundHeaderAllowlist: [],
-      disabledPublicModelIds: [], modelPrefix: null, modelsCache: null,
+      modelFilterMode: 'blacklist', disabledPublicModelIds: [], enabledPublicModelIds: [], modelPrefix: null, modelsCache: null,
       instance: stubProvider({
         callAnthropicMessages: async (_model, body): Promise<ProviderStreamResult<AnthropicMessagesStreamEventEx>> => {
           observedBody = body as Omit<AnthropicMessagesPayload, 'model'>;
@@ -772,7 +776,7 @@ test('generate lowers agent_message to a framed user message across translation 
   const candidate: ModelCandidate = {
     provider: {
       upstreamId: 'up_test', kind: 'custom', name: 'up_test', inboundHeaderAllowlist: [],
-      disabledPublicModelIds: [], modelPrefix: null, modelsCache: null,
+      modelFilterMode: 'blacklist', disabledPublicModelIds: [], enabledPublicModelIds: [], modelPrefix: null, modelsCache: null,
       instance: stubProvider({
         callAnthropicMessages: async (_model, body): Promise<ProviderStreamResult<AnthropicMessagesStreamEventEx>> => {
           observedBody = body as Omit<AnthropicMessagesPayload, 'model'>;
@@ -823,7 +827,7 @@ test('generate lowers agent_message to a framed user message across translation 
   const candidate: ModelCandidate = {
     provider: {
       upstreamId: 'up_chat', kind: 'custom', name: 'up_chat', inboundHeaderAllowlist: [],
-      disabledPublicModelIds: [], modelPrefix: null, modelsCache: null,
+      modelFilterMode: 'blacklist', disabledPublicModelIds: [], enabledPublicModelIds: [], modelPrefix: null, modelsCache: null,
       instance: stubProvider({
         callOpenAIChatCompletions: async (_model, body): Promise<ProviderStreamResult<OpenAIChatCompletionsStreamEvent>> => {
           observedBody = body;

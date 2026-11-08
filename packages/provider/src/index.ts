@@ -32,13 +32,20 @@ export {
 export type {
   InternalAliasedFrom,
   InternalModel,
+  ModelFilterMode,
   ProviderModel,
   ProxyFallbackEntry,
   UpstreamModelsCache,
   UpstreamProviderKind,
   UpstreamRecord,
 } from './model.ts';
-export { ALL_PROVIDER_KINDS, assertUpstreamProviderKind, normalizeUpstreamHue, UPSTREAM_HUE_DEGREES } from './model.ts';
+export {
+  ALL_PROVIDER_KINDS,
+  assertUpstreamProviderKind,
+  isModelAllowed,
+  normalizeUpstreamHue,
+  UPSTREAM_HUE_DEGREES,
+} from './model.ts';
 export type { PerformanceOperation, PerformanceTelemetryContext, TelemetryModelIdentity } from './telemetry.ts';
 export { parsePerformanceOperation, PERFORMANCE_OPERATIONS } from './telemetry.ts';
 

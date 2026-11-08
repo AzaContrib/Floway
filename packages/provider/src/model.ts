@@ -34,6 +34,26 @@ export const normalizeUpstreamHue = (value: unknown): number => {
   return value;
 };
 
+export type ModelFilterMode = 'blacklist' | 'whitelist';
+
+export const isModelAllowed = (
+  filter: {
+    readonly modelFilterMode: ModelFilterMode;
+    readonly disabledPublicModelIds: readonly string[] | ReadonlySet<string>;
+    readonly enabledPublicModelIds: readonly string[] | ReadonlySet<string>;
+  },
+  modelId: string,
+): boolean => {
+  if (filter.modelFilterMode === 'whitelist') {
+    return filter.enabledPublicModelIds instanceof Set
+      ? filter.enabledPublicModelIds.has(modelId)
+      : (filter.enabledPublicModelIds as readonly string[]).includes(modelId);
+  }
+  return filter.disabledPublicModelIds instanceof Set
+    ? !filter.disabledPublicModelIds.has(modelId)
+    : !(filter.disabledPublicModelIds as readonly string[]).includes(modelId);
+};
+
 // One entry in `UpstreamRecord.proxyFallbackList`. `id` is the proxy id from
 // the proxies catalog or a built-in transport (`direct_fetch`,
 // `direct_connect`). `colos` is an
@@ -81,13 +101,17 @@ export interface UpstreamRecord {
   // refresh stores an empty entry with its error.
   modelsCache: UpstreamModelsCache | null;
   flagOverrides: FlagOverrides;
+  // Whether models from this upstream are filtered by blacklist (default-allow,
+  // where entries in disabledPublicModelIds are excluded) or whitelist
+  // (default-block, where only entries in enabledPublicModelIds are included).
+  modelFilterMode: ModelFilterMode;
   // Model ids the operator switched off for this upstream, matched against the
   // provider-emitted id before any model prefix is applied — so one entry hides
-  // both the bare and the prefixed surface. Orthogonal to every per-model
-  // metadata field and uniform across provider kinds: a disabled id is hidden
-  // from the catalog and unroutable, but its row metadata stays editable.
-  // Entries may reference ids no longer present in the live model list.
+  // both the bare and the prefixed surface. Used when modelFilterMode === 'blacklist'.
   disabledPublicModelIds: string[];
+  // Model ids the operator explicitly allowed for this upstream, matched against the
+  // provider-emitted id before any model prefix is applied. Used when modelFilterMode === 'whitelist'.
+  enabledPublicModelIds: string[];
   proxyFallbackList: ProxyFallbackEntry[];
   // Per-upstream model name prefix policy. `null` keeps the bare-id behavior
   // — the upstream's models are addressed and listed by bare upstream id only.

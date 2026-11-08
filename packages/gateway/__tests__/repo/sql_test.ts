@@ -11,26 +11,31 @@ import { assertEquals, assertRejects, stubProviderModel } from '@floway-dev/test
 
 const goodAccount = { chatgptAccountId: 'aid', refresh_token: 'rt_v1', state: 'active' as const, state_updated_at: '2026-01-01T00:00:00Z' };
 const GENERATION = '2026-06-05T00:00:00.000Z';
-const baseRecord = (overrides: Partial<StoredUpstreamRecord> = {}): StoredUpstreamRecord => ({
-  id: 'up_test',
-  kind: 'codex',
-  name: 'Codex Test',
-  enabled: true,
-  usageRefreshIntervalMinutes: 0,
-  sortOrder: 0,
-  createdAt: '2026-06-05T00:00:00.000Z',
-  updatedAt: GENERATION,
-  config: { accounts: [{ email: 'a@b.com', chatgptAccountId: 'aid', chatgptUserId: 'uid', planType: 'plus' }] },
-  state: { accounts: [goodAccount] },
-  flagOverrides: {},
-  disabledPublicModelIds: [],
-  proxyFallbackList: [],
-  modelPrefix: null,
-  configVersion: 1,
-  modelsCache: null,
-  hue: 210,
-  ...overrides,
-});
+const baseRecord = (overrides: Partial<StoredUpstreamRecord> = {}): StoredUpstreamRecord => {
+  const { modelFilterMode = 'blacklist', disabledPublicModelIds = [], enabledPublicModelIds = [], ...rest } = overrides;
+  return {
+    id: 'up_test',
+    kind: 'codex',
+    name: 'Codex Test',
+    enabled: true,
+    usageRefreshIntervalMinutes: 0,
+    sortOrder: 0,
+    createdAt: '2026-06-05T00:00:00.000Z',
+    updatedAt: GENERATION,
+    config: { accounts: [{ email: 'a@b.com', chatgptAccountId: 'aid', chatgptUserId: 'uid', planType: 'plus' }] },
+    state: { accounts: [goodAccount] },
+    flagOverrides: {},
+    modelFilterMode,
+    disabledPublicModelIds,
+    enabledPublicModelIds,
+    proxyFallbackList: [],
+    modelPrefix: null,
+    configVersion: 1,
+    modelsCache: null,
+    hue: 210,
+    ...rest,
+  };
+};
 const identityFor = modelsRefreshIdentity;
 
 const ownValue = (value: unknown, key: string): unknown => {

@@ -2,7 +2,7 @@ import type { OpenAIAudioTranscriptionRequest } from './audio.ts';
 import type { FlagDefaults } from './flags.ts';
 import type { OpenAIImagesEditsRequest } from './images.ts';
 import type { ModelPrefixConfig } from './model-prefix.ts';
-import type { ProviderModel, UpstreamModelsCache, UpstreamProviderKind, UpstreamRecord } from './model.ts';
+import type { ModelFilterMode, ProviderModel, UpstreamModelsCache, UpstreamProviderKind, UpstreamRecord } from './model.ts';
 import type { Fetcher } from './options.ts';
 import type { ProviderScheduledOptions } from './scheduled.ts';
 import type { AnthropicMessagesPayload, AnthropicMessagesStreamEventEx } from '@floway-dev/protocols/anthropic-messages';
@@ -36,7 +36,9 @@ export interface Provider {
   // ASCII-case-insensitive names; regular expressions run against normalized
   // lowercase names. The gateway applies this at the candidate boundary.
   inboundHeaderAllowlist: readonly InboundHeaderMatcher[];
+  modelFilterMode: ModelFilterMode;
   disabledPublicModelIds: readonly string[];
+  enabledPublicModelIds: readonly string[];
   // Per-upstream model name prefix policy mirrored from the source upstream
   // record so registry helpers — routing and listing — read it from the
   // instance instead of re-fetching the row. `null` keeps the bare-id behavior.

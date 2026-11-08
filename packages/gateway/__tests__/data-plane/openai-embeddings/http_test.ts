@@ -207,7 +207,9 @@ test('/v1/embeddings routes to custom upstream when model is only declared there
     sortOrder: 100,
     createdAt: '2026-05-01T00:00:00.000Z',
     flagOverrides: {},
+    modelFilterMode: 'blacklist',
     disabledPublicModelIds: [],
+    enabledPublicModelIds: [],
     config: {
       baseUrl: 'https://embed.example.com',
       authStyle: 'bearer',
@@ -282,7 +284,9 @@ test('/v1/embeddings rejects model on custom upstream without /embeddings capabi
     sortOrder: 100,
     createdAt: '2026-05-01T00:00:00.000Z',
     flagOverrides: {},
+    modelFilterMode: 'blacklist',
     disabledPublicModelIds: [],
+    enabledPublicModelIds: [],
     config: {
       baseUrl: 'https://chat.example.com',
       authStyle: 'bearer',
@@ -342,7 +346,9 @@ test('/v1/embeddings reports the failed upstream parenthetically when /v1/models
     sortOrder: 100,
     createdAt: '2026-05-01T00:00:00.000Z',
     flagOverrides: {},
+    modelFilterMode: 'blacklist',
     disabledPublicModelIds: [],
+    enabledPublicModelIds: [],
     config: {
       baseUrl: 'https://embed.example.com',
       authStyle: 'bearer',
@@ -402,7 +408,9 @@ test('/v1/embeddings reports the failed upstream even when a sibling upstream\'s
     sortOrder: 100,
     createdAt: '2026-05-01T00:00:00.000Z',
     flagOverrides: {},
+    modelFilterMode: 'blacklist',
     disabledPublicModelIds: [],
+    enabledPublicModelIds: [],
     config: {
       baseUrl: 'https://embed.example.com',
       authStyle: 'bearer',

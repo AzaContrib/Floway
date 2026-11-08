@@ -17,7 +17,7 @@ import type { StoredUpstreamRecord, User } from '../../../repo/types.ts';
 import { compareModelIds, getModelsFromProviders, mergeIntoCatalog } from '../../providers/catalog.ts';
 import { MODEL_CATALOG_REVISION } from '../../providers/models-cache.ts';
 import { listModelProviders } from '../../providers/registry.ts';
-import type { InternalModel, Provider } from '@floway-dev/provider';
+import { isModelAllowed, type InternalModel, type Provider } from '@floway-dev/provider';
 
 export interface AddressableIdEntry {
   // The inbound model id the data plane will accept verbatim.
@@ -91,7 +91,11 @@ export const enumerateAddressableModelIds = async (
     if (cfg === null || addressableOnly.length === 0) continue;
 
     const upstreamModels = provider.modelsCache?.revision === MODEL_CATALOG_REVISION ? provider.modelsCache.models : [];
-    const disabled = new Set(provider.disabledPublicModelIds);
+    const filter = {
+      modelFilterMode: provider.modelFilterMode,
+      disabledPublicModelIds: new Set(provider.disabledPublicModelIds),
+      enabledPublicModelIds: new Set(provider.enabledPublicModelIds),
+    };
 
     // The canonical listed form for this upstream — the row the listing
     // surface emitted, and the row an addressable-only prefix alternate
@@ -99,7 +103,7 @@ export const enumerateAddressableModelIds = async (
     const canonicalForm = cfg.listed.includes('prefixed') ? 'prefixed' : 'unprefixed';
 
     for (const upstreamModel of upstreamModels) {
-      if (!upstreamModel.id || disabled.has(upstreamModel.id)) continue;
+      if (!upstreamModel.id || !isModelAllowed(filter, upstreamModel.id)) continue;
       if (cfg.listed.length === 0) {
         for (const form of addressableOnly) {
           const id = form === 'prefixed' ? `${cfg.prefix}${upstreamModel.id}` : upstreamModel.id;

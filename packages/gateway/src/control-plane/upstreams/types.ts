@@ -2,6 +2,7 @@ import type { ModelEndpoints } from '@floway-dev/protocols/common';
 import type {
   FlagDefaults,
   FlagOverrides,
+  ModelFilterMode,
   ModelPrefixConfig,
   ProxyFallbackEntry,
   UpstreamModelConfig,
@@ -139,7 +140,9 @@ interface SerializedUpstreamRecordBase {
   updated_at: string;
   flag_overrides: FlagOverrides;
   flag_defaults: FlagDefaults;
+  model_filter_mode: ModelFilterMode;
   disabled_public_model_ids: string[];
+  enabled_public_model_ids: string[];
   proxy_fallback_list: ProxyFallbackEntry[];
   model_prefix: ModelPrefixConfig | null;
   hue: number;

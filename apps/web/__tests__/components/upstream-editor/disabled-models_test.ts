@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildDisabledModelOptions } from '../../../src/components/upstream-editor/config-sidebar';
+import { buildDisabledModelOptions, buildEnabledModelOptions } from '../../../src/components/upstream-editor/config-sidebar';
 import type { UpstreamModelConfig } from '@floway-dev/provider/browser';
 
 const model = (upstreamModelId: string, publicModelId?: string): UpstreamModelConfig => ({
@@ -10,9 +10,22 @@ const model = (upstreamModelId: string, publicModelId?: string): UpstreamModelCo
   endpoints: { openaiChatCompletions: {} },
 });
 
-describe('disabled model options', () => {
-  it('combines discovered and manual public ids while retaining stale selections', () => {
+describe('model filter options', () => {
+  it('combines discovered and manual public ids while retaining stale selections for disabled models', () => {
     expect(buildDisabledModelOptions(
+      [model('wire-b', 'public-b')],
+      [model('manual-a')],
+      ['public-b', 'removed-c'],
+      true,
+    )).toEqual([
+      { id: 'manual-a', missing: false },
+      { id: 'public-b', missing: false },
+      { id: 'removed-c', missing: true },
+    ]);
+  });
+
+  it('combines discovered and manual public ids while retaining stale selections for enabled models', () => {
+    expect(buildEnabledModelOptions(
       [model('wire-b', 'public-b')],
       [model('manual-a')],
       ['public-b', 'removed-c'],
@@ -26,6 +39,8 @@ describe('disabled model options', () => {
 
   it('does not call a selection missing when the catalog request failed', () => {
     expect(buildDisabledModelOptions([], [], ['unknown'], false))
+      .toEqual([{ id: 'unknown', missing: false }]);
+    expect(buildEnabledModelOptions([], [], ['unknown'], false))
       .toEqual([{ id: 'unknown', missing: false }]);
   });
 });
